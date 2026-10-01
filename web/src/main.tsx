@@ -8,21 +8,18 @@ import './styles.css'
 import App from './App'
 
 const theme = createTheme({
-  primaryColor: 'moss',
-  colors: {
-    moss: [
-      '#eff8ed', '#dcebd8', '#b9d6b2', '#91bf87', '#70aa66',
-      '#5c9d51', '#4d9144', '#3d7b35', '#336b2d', '#275d23',
-    ],
-  },
-  fontFamily: '"Avenir Next", Avenir, "Segoe UI", sans-serif',
-  headings: { fontFamily: '"Avenir Next", Avenir, "Segoe UI", sans-serif' },
-  defaultRadius: 'md',
+  primaryColor: 'gray',
+  primaryShade: { light: 9, dark: 0 },
+  autoContrast: true,
+  fontFamily: 'Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  fontFamilyMonospace: '"SFMono-Regular", Consolas, "Liberation Mono", monospace',
+  headings: { fontFamily: 'Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+  defaultRadius: 'sm',
 })
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <MantineProvider theme={theme} defaultColorScheme="light">
+    <MantineProvider theme={theme} defaultColorScheme="auto">
       <Notifications position="top-right" />
       <App />
     </MantineProvider>

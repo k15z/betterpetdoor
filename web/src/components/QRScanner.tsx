@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Alert, AspectRatio, Button, Group, Stack, Text } from '@mantine/core'
+import { Alert, AspectRatio, Button, Group, Stack } from '@mantine/core'
 import { IconCamera, IconCameraOff } from '@tabler/icons-react'
 import { BrowserQRCodeReader, type IScannerControls } from '@zxing/browser'
 
@@ -58,16 +58,12 @@ export function QRScanner({ onScan }: { onScan: (value: string) => void }) {
           <video ref={videoRef} muted playsInline />
         </AspectRatio>
       )}
-      {error && <Alert color="orange" variant="light">{error}</Alert>}
-      <Group justify="space-between">
-        <div>
-          <Text fw={650} size="sm">Wayzn “Add New User” QR</Text>
-          <Text size="xs" c="dimmed">The code is sent only to your own server.</Text>
-        </div>
+      {error && <Alert color="gray" variant="outline">{error}</Alert>}
+      <Group justify="flex-end">
         {active ? (
-          <Button variant="light" color="gray" leftSection={<IconCameraOff size={17} />} onClick={stop}>Stop</Button>
+          <Button variant="default" leftSection={<IconCameraOff size={16} />} onClick={stop}>Stop camera</Button>
         ) : (
-          <Button variant="light" leftSection={<IconCamera size={17} />} onClick={start}>Scan</Button>
+          <Button variant="default" leftSection={<IconCamera size={16} />} onClick={start}>Scan QR</Button>
         )}
       </Group>
     </Stack>

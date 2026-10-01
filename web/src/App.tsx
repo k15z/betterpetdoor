@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Center, Loader } from '@mantine/core'
+import { Center, Text } from '@mantine/core'
 import { api, APIError } from './api'
 import { Dashboard } from './components/Dashboard'
 import { Login } from './components/Login'
@@ -21,7 +21,7 @@ export default function App() {
   if (authState === 'checking') {
     return (
       <Center mih="100vh" className="page-surface">
-        <Loader color="moss" />
+        <Text c="dimmed" size="sm">Loading</Text>
       </Center>
     )
   }

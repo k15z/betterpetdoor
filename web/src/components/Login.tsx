@@ -1,8 +1,7 @@
 import { FormEvent, useState } from 'react'
-import { Alert, Button, Container, Paper, PasswordInput, Stack, Text, Title } from '@mantine/core'
-import { IconAlertCircle, IconArrowRight } from '@tabler/icons-react'
+import { Alert, Button, Container, PasswordInput, Stack, Title } from '@mantine/core'
+import { IconAlertCircle } from '@tabler/icons-react'
 import { api } from '../api'
-import { Brand } from './Brand'
 
 export function Login({ onSignedIn }: { onSignedIn: () => void }) {
   const [password, setPassword] = useState('')
@@ -25,26 +24,18 @@ export function Login({ onSignedIn }: { onSignedIn: () => void }) {
 
   return (
     <main className="login-page page-surface">
-      <Container size={440} className="login-shell">
-        <Brand />
-        <div className="login-copy">
-          <Text className="eyebrow">Your doors. Your server.</Text>
-          <Title order={1}>Welcome home.</Title>
-          <Text c="dimmed" size="lg">
-            Sign in to open, close, and check your pet doors.
-          </Text>
-        </div>
-        <Paper component="form" onSubmit={submit} className="login-card" p="xl" radius="lg">
+      <Container size={380} className="login-shell">
+        <form onSubmit={submit} className="login-form">
           <Stack>
+            <Title order={1}>Pet doors</Title>
             <input className="sr-only" name="username" value="admin" autoComplete="username" readOnly tabIndex={-1} />
             {error && (
-              <Alert icon={<IconAlertCircle size={18} />} color="red" variant="light">
+              <Alert icon={<IconAlertCircle size={17} />} color="gray" variant="outline">
                 {error}
               </Alert>
             )}
             <PasswordInput
-              label="Admin password"
-              placeholder="Enter your password"
+              label="Password"
               value={password}
               onChange={(event) => setPassword(event.currentTarget.value)}
               autoFocus
@@ -52,16 +43,12 @@ export function Login({ onSignedIn }: { onSignedIn: () => void }) {
               size="md"
               required
             />
-            <Button type="submit" size="md" loading={loading} rightSection={<IconArrowRight size={18} />}>
-              Enter dashboard
+            <Button type="submit" size="md" disabled={loading}>
+              {loading ? 'Signing in' : 'Sign in'}
             </Button>
           </Stack>
-        </Paper>
-        <Text size="xs" c="dimmed" ta="center">
-          Self-hosted. No cloud account required.
-        </Text>
+        </form>
       </Container>
-      <div className="threshold-art" aria-hidden="true"><span /></div>
     </main>
   )
 }

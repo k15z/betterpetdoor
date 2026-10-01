@@ -1,8 +1,8 @@
 import { FormEvent, useState } from 'react'
 import {
-  Alert, Button, Group, Modal, PasswordInput, Select, Stack, TextInput, Textarea,
+  Alert, Button, Group, Modal, PasswordInput, Stack, TextInput, Textarea,
 } from '@mantine/core'
-import { IconAlertCircle, IconCheck, IconQrcode } from '@tabler/icons-react'
+import { IconAlertCircle } from '@tabler/icons-react'
 import { api, type Door } from '../api'
 import { QRScanner } from './QRScanner'
 
@@ -53,54 +53,39 @@ export function AddDoorModal({
   }
 
   return (
-    <Modal opened={opened} onClose={resetAndClose} title="Connect a pet door" size="lg" centered>
+    <Modal opened={opened} onClose={resetAndClose} title="Connect a pet door" size="lg" centered transitionProps={{ duration: 0 }}>
       <form onSubmit={submit}>
         <Stack gap="lg">
           {error && (
-            <Alert icon={<IconAlertCircle size={18} />} color="red" variant="light">
+            <Alert icon={<IconAlertCircle size={17} />} color="gray" variant="outline">
               {error}
             </Alert>
           )}
-          <Group grow align="start">
-            <TextInput
-              label="Door name"
-              placeholder="Kitchen door"
-              value={name}
-              onChange={(event) => setName(event.currentTarget.value)}
-              required
-            />
-            <Select
-              label="Provider"
-              data={[{ value: 'wayzn', label: 'Wayzn' }]}
-              value="wayzn"
-              allowDeselect={false}
-            />
-          </Group>
+          <TextInput
+            label="Name"
+            placeholder="Kitchen"
+            value={name}
+            onChange={(event) => setName(event.currentTarget.value)}
+            required
+          />
 
-          <div className="setup-section">
+          <Stack gap="xs">
             <QRScanner onScan={setQRPayload} />
             <Textarea
-              mt="md"
-              label="QR contents"
-              description="Scan with the camera, or paste the code here."
+              label="Pairing code"
+              description="Scan or paste the Wayzn Add New User code."
               placeholder="Pairing code"
               value={qrPayload}
               onChange={(event) => setQRPayload(event.currentTarget.value)}
-              leftSection={<IconQrcode size={17} />}
               minRows={2}
               autosize
               required
             />
-            {qrPayload && (
-              <Alert mt="sm" color="moss" variant="light" icon={<IconCheck size={17} />}>
-                Pairing code captured.
-              </Alert>
-            )}
-          </div>
+          </Stack>
 
-          <div className="setup-section">
+          <Stack gap="md">
             <TextInput
-              label="Wayzn email"
+              label="Email"
               type="email"
               autoComplete="username"
               value={email}
@@ -108,19 +93,18 @@ export function AddDoorModal({
               required
             />
             <PasswordInput
-              mt="md"
-              label="Wayzn password"
-              description="Used once to get a refresh token. It is never saved."
+              label="Password"
+              description="Used once and not saved."
               autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.currentTarget.value)}
               required
             />
-          </div>
+          </Stack>
 
           <Group justify="flex-end">
-            <Button variant="subtle" color="gray" onClick={resetAndClose}>Cancel</Button>
-            <Button type="submit" loading={saving}>Connect door</Button>
+            <Button variant="default" onClick={resetAndClose}>Cancel</Button>
+            <Button type="submit" disabled={saving}>{saving ? 'Connecting' : 'Connect'}</Button>
           </Group>
         </Stack>
       </form>
