@@ -109,6 +109,18 @@ At [Fly.io's published September 2026 rates](https://fly.io/docs/about/pricing/)
 
 SQLite supports one active Better Pet Door machine. Do not scale this deployment horizontally.
 
+### Automatic Fly deployments
+
+After the first Fly setup, add an app-scoped deploy token and app name to the GitHub repository:
+
+```sh
+fly tokens create deploy --app your-app-name --expiry 8760h \
+  | gh secret set FLY_API_TOKEN
+gh variable set FLY_APP_NAME --body your-app-name
+```
+
+Every push to `main` then runs the full test suite and deploys only after it passes. Fly secrets and the persistent volume remain managed outside GitHub Actions.
+
 ## Develop locally
 
 ```sh

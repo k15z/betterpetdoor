@@ -28,3 +28,19 @@ jobs:
       - run: npm run build
         working-directory: web
       - run: docker build .
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.FLY_APP_NAME != ''
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: fly-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only --app "$FLY_APP_NAME"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          FLY_APP_NAME: ${{ vars.FLY_APP_NAME }}
