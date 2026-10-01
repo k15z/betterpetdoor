@@ -10,7 +10,7 @@ Wayzn is the first supported provider. The provider boundary is intentionally sm
 
 Here Muse connects to the self-hosted API, checks a door, opens it for five minutes, then closes it early.
 
-![Muse connecting to and controlling a pet door through Better Pet Door](docs/assets/muse-example.png)
+![Two matching iPhone frames showing Muse connecting to Better Pet Door, checking the door, opening it, and closing it early](docs/assets/muse-example.png)
 
 ## What works
 
