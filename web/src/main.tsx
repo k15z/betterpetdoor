@@ -9,7 +9,7 @@ import App from './App'
 
 const theme = createTheme({
   primaryColor: 'gray',
-  primaryShade: { light: 9, dark: 0 },
+  primaryShade: 9,
   autoContrast: true,
   fontFamily: 'Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   fontFamilyMonospace: '"SFMono-Regular", Consolas, "Liberation Mono", monospace',

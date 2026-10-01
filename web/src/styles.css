@@ -11,8 +11,6 @@
   --app-muted: #737373;
   --app-line: #dedede;
   --app-line-strong: #b8b8b8;
-  --app-control: #111111;
-  --app-control-text: #ffffff;
 }
 
 [data-mantine-color-scheme='dark'] {
@@ -23,8 +21,6 @@
   --app-muted: #969696;
   --app-line: #2d2d2d;
   --app-line-strong: #555555;
-  --app-control: #f1f1f1;
-  --app-control-text: #111111;
 }
 
 *, *::before, *::after {
@@ -130,18 +126,6 @@ button, input, textarea { font: inherit; }
   pointer-events: none;
 }
 .scanner-frame video { width: 100%; height: 100%; object-fit: cover; }
-
-.mantine-Button-root[data-variant='filled'] {
-  --button-bg: var(--app-control);
-  --button-hover: color-mix(in srgb, var(--app-control) 82%, var(--app-canvas));
-  --button-color: var(--app-control-text);
-}
-
-.mantine-Button-root[data-variant='default'],
-.mantine-ActionIcon-root[data-variant='default'] {
-  border-color: var(--app-line);
-  background: var(--app-surface);
-}
 
 .mantine-Modal-content,
 .mantine-Modal-overlay,
