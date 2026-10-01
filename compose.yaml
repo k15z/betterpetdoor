@@ -1,0 +1,16 @@
+services:
+  betterpetdoor:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      BETTERPETDOOR_ADMIN_PASSWORD: ${BETTERPETDOOR_ADMIN_PASSWORD:?Set BETTERPETDOOR_ADMIN_PASSWORD}
+      BETTERPETDOOR_SECRET_KEY: ${BETTERPETDOOR_SECRET_KEY:?Set BETTERPETDOOR_SECRET_KEY}
+      BETTERPETDOOR_WAYZN_FIREBASE_API_KEY: ${BETTERPETDOOR_WAYZN_FIREBASE_API_KEY:?Set BETTERPETDOOR_WAYZN_FIREBASE_API_KEY}
+      BETTERPETDOOR_SECURE_COOKIE: "false"
+    volumes:
+      - betterpetdoor-data:/data
+    restart: unless-stopped
+
+volumes:
+  betterpetdoor-data:
