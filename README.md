@@ -12,12 +12,26 @@ Wayzn is the first supported provider. The provider boundary is intentionally sm
 - Any number of pet doors in one instance
 - Webcam scanning for Wayzn “Add New User” QR codes
 - Open, close, open-and-close, and live status
+- Remote MCP server with OAuth for ChatGPT, Codex, Claude, and other agents
 - REST API authenticated with the admin password
+- OpenAPI 3.1 document for agents without MCP support
 - SQLite persistence
 - AES-GCM encryption for provider credentials at rest
 - Docker and Fly.io deployment
 
 The Wayzn password is used once to obtain a refresh token. It is never stored. QR device keys and refresh tokens are encrypted before being saved to SQLite.
+
+## Connect an agent
+
+Use your instance's MCP endpoint:
+
+```text
+https://your-host.example/mcp
+```
+
+OAuth opens a Better Pet Door page and asks for the admin password. There is one `mcp` permission covering both status and control.
+
+See [Connect ChatGPT, Codex, Claude, and Muse](docs/agents.md) for setup instructions.
 
 ## Get the Wayzn Firebase API key
 
@@ -88,6 +102,8 @@ Pairing request:
 ```
 
 Do not put the bearer token or pairing payload in a URL.
+
+The machine-readable OpenAPI 3.1 document is available without authentication at `/openapi.json`.
 
 ## Fly.io
 
