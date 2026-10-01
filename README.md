@@ -6,6 +6,12 @@ Wayzn is the first supported provider. The provider boundary is intentionally sm
 
 > Better Pet Door is unofficial and is not affiliated with or endorsed by Wayzn. Only connect devices and accounts you own or are authorized to control.
 
+## Featured example
+
+Here Muse connects to the self-hosted API, checks a door, opens it for five minutes, then closes it early.
+
+![Muse connecting to and controlling a pet door through Better Pet Door](docs/assets/muse-example.png)
+
 ## What works
 
 - Password-protected web dashboard
