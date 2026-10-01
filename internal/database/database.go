@@ -78,6 +78,24 @@ CREATE TABLE IF NOT EXISTS doors (
     encrypted_credentials BLOB NOT NULL,
     created_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS oauth_codes (
+    code_hash TEXT PRIMARY KEY,
+    client_id TEXT NOT NULL,
+    redirect_uri TEXT NOT NULL,
+    code_challenge TEXT NOT NULL,
+    scope TEXT NOT NULL,
+    resource TEXT NOT NULL,
+    expires_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS oauth_codes_expires_at ON oauth_codes(expires_at);
+CREATE TABLE IF NOT EXISTS oauth_tokens (
+    token_hash TEXT PRIMARY KEY,
+    kind TEXT NOT NULL,
+    client_id TEXT NOT NULL,
+    scope TEXT NOT NULL,
+    expires_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS oauth_tokens_expires_at ON oauth_tokens(expires_at);
 `
 	if _, err := db.sql.ExecContext(ctx, schema); err != nil {
 		return fmt.Errorf("migrate database: %w", err)
@@ -130,6 +148,133 @@ func (db *DB) DeleteExpiredSessions(ctx context.Context, now time.Time) error {
 
 func (db *DB) DeleteAllSessions(ctx context.Context) error {
 	_, err := db.sql.ExecContext(ctx, `DELETE FROM sessions`)
+	return err
+}
+
+type OAuthCode struct {
+	ClientID      string
+	RedirectURI   string
+	CodeChallenge string
+	Scope         string
+	Resource      string
+	ExpiresAt     time.Time
+}
+
+type OAuthToken struct {
+	ClientID  string
+	Scope     string
+	ExpiresAt time.Time
+}
+
+func (db *DB) CreateOAuthCode(ctx context.Context, codeHash string, code OAuthCode) error {
+	_, err := db.sql.ExecContext(ctx, `
+INSERT INTO oauth_codes(code_hash, client_id, redirect_uri, code_challenge, scope, resource, expires_at)
+VALUES(?, ?, ?, ?, ?, ?, ?)`,
+		codeHash, code.ClientID, code.RedirectURI, code.CodeChallenge, code.Scope, code.Resource, code.ExpiresAt.Unix(),
+	)
+	return err
+}
+
+func (db *DB) ConsumeOAuthCode(ctx context.Context, codeHash string) (OAuthCode, error) {
+	tx, err := db.sql.BeginTx(ctx, nil)
+	if err != nil {
+		return OAuthCode{}, err
+	}
+	defer tx.Rollback()
+
+	var code OAuthCode
+	var expiresAt int64
+	err = tx.QueryRowContext(ctx, `
+SELECT client_id, redirect_uri, code_challenge, scope, resource, expires_at
+FROM oauth_codes WHERE code_hash = ?`, codeHash).
+		Scan(&code.ClientID, &code.RedirectURI, &code.CodeChallenge, &code.Scope, &code.Resource, &expiresAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return OAuthCode{}, ErrNotFound
+	}
+	if err != nil {
+		return OAuthCode{}, err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM oauth_codes WHERE code_hash = ?`, codeHash); err != nil {
+		return OAuthCode{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return OAuthCode{}, err
+	}
+	code.ExpiresAt = time.Unix(expiresAt, 0).UTC()
+	return code, nil
+}
+
+func (db *DB) CreateOAuthToken(ctx context.Context, tokenHash, kind string, token OAuthToken) error {
+	_, err := db.sql.ExecContext(ctx, `
+INSERT INTO oauth_tokens(token_hash, kind, client_id, scope, expires_at)
+VALUES(?, ?, ?, ?, ?)`, tokenHash, kind, token.ClientID, token.Scope, token.ExpiresAt.Unix())
+	return err
+}
+
+func (db *DB) OAuthToken(ctx context.Context, tokenHash, kind string, now time.Time) (OAuthToken, error) {
+	var token OAuthToken
+	var expiresAt int64
+	err := db.sql.QueryRowContext(ctx, `
+SELECT client_id, scope, expires_at
+FROM oauth_tokens WHERE token_hash = ? AND kind = ? AND expires_at > ?`,
+		tokenHash, kind, now.Unix()).Scan(&token.ClientID, &token.Scope, &expiresAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return OAuthToken{}, ErrNotFound
+	}
+	if err != nil {
+		return OAuthToken{}, err
+	}
+	token.ExpiresAt = time.Unix(expiresAt, 0).UTC()
+	return token, nil
+}
+
+func (db *DB) ConsumeOAuthToken(ctx context.Context, tokenHash, kind string, now time.Time) (OAuthToken, error) {
+	tx, err := db.sql.BeginTx(ctx, nil)
+	if err != nil {
+		return OAuthToken{}, err
+	}
+	defer tx.Rollback()
+
+	var token OAuthToken
+	var expiresAt int64
+	err = tx.QueryRowContext(ctx, `
+SELECT client_id, scope, expires_at
+FROM oauth_tokens WHERE token_hash = ? AND kind = ? AND expires_at > ?`,
+		tokenHash, kind, now.Unix()).Scan(&token.ClientID, &token.Scope, &expiresAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return OAuthToken{}, ErrNotFound
+	}
+	if err != nil {
+		return OAuthToken{}, err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM oauth_tokens WHERE token_hash = ?`, tokenHash); err != nil {
+		return OAuthToken{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return OAuthToken{}, err
+	}
+	token.ExpiresAt = time.Unix(expiresAt, 0).UTC()
+	return token, nil
+}
+
+func (db *DB) DeleteOAuthToken(ctx context.Context, tokenHash string) error {
+	_, err := db.sql.ExecContext(ctx, `DELETE FROM oauth_tokens WHERE token_hash = ?`, tokenHash)
+	return err
+}
+
+func (db *DB) DeleteExpiredOAuth(ctx context.Context, now time.Time) error {
+	if _, err := db.sql.ExecContext(ctx, `DELETE FROM oauth_codes WHERE expires_at <= ?`, now.Unix()); err != nil {
+		return err
+	}
+	_, err := db.sql.ExecContext(ctx, `DELETE FROM oauth_tokens WHERE expires_at <= ?`, now.Unix())
+	return err
+}
+
+func (db *DB) DeleteAllOAuth(ctx context.Context) error {
+	if _, err := db.sql.ExecContext(ctx, `DELETE FROM oauth_codes`); err != nil {
+		return err
+	}
+	_, err := db.sql.ExecContext(ctx, `DELETE FROM oauth_tokens`)
 	return err
 }
 

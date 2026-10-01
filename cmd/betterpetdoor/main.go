@@ -55,6 +55,9 @@ func run(logger *slog.Logger) error {
 	if err := db.DeleteExpiredSessions(context.Background(), time.Now()); err != nil {
 		logger.Warn("could not remove expired sessions", "error", err)
 	}
+	if err := db.DeleteExpiredOAuth(context.Background(), time.Now()); err != nil {
+		logger.Warn("could not remove expired OAuth data", "error", err)
+	}
 
 	handler := httpapi.New(httpapi.Config{
 		Database:            db,

@@ -47,6 +47,9 @@ func (s *Service) SetPassword(ctx context.Context, password string) error {
 	if err := s.db.DeleteAllSessions(ctx); err != nil {
 		return fmt.Errorf("invalidate old sessions: %w", err)
 	}
+	if err := s.db.DeleteAllOAuth(ctx); err != nil {
+		return fmt.Errorf("invalidate old OAuth grants: %w", err)
+	}
 	return nil
 }
 
