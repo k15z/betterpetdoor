@@ -1,0 +1,24 @@
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Frontend build output
+web/dist/
+web/node_modules/
+
+# Go build output
+/betterpetdoor
+/bin/
+coverage.out
+output/
+.playwright-cli/
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
