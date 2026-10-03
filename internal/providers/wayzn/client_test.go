@@ -62,3 +62,22 @@ func TestNormalizeStatus(t *testing.T) {
 		t.Fatalf("got %#v", obstructed)
 	}
 }
+
+func TestNormalizeStatusDoesNotInferOnline(t *testing.T) {
+	status := normalizeStatus(map[string]any{"ControlState": float64(7), "SafeToClose": true})
+	if status.Online != nil {
+		t.Fatalf("missing connectivity must remain unknown: %+v", status)
+	}
+}
+func TestCommandRejectsHTTP200FailureBodies(t *testing.T) {
+	for _, body := range []string{"Device is offline.", "Invalid signature", "ERROR", `{"success":false,"error":"denied"}`, "false", "Door busy", "not safe", `{"success":false}`, `{"ok":false}`} {
+		if err := commandResponseError(body); err == nil {
+			t.Fatalf("accepted failure %q", body)
+		}
+	}
+	for _, body := range []string{"OK", "Success", "Command sent.", `{"ok":true,"error":null}`} {
+		if err := commandResponseError(body); err != nil {
+			t.Fatalf("rejected compatibility response %q", body)
+		}
+	}
+}

@@ -22,3 +22,6 @@ output/
 .DS_Store
 .idea/
 .vscode/
+
+# Reproducible, checksum-pinned camera model downloads (19 MB / 68 MB)
+web/public/models/

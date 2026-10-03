@@ -18,6 +18,7 @@ Here Muse connects to the self-hosted API, checks a door, opens it for five minu
 - Any number of pet doors in one instance
 - Webcam scanning for Wayzn “Add New User” QR codes
 - Open, close, open-and-close, and live status
+- Opt-in local dog detection with per-door camera mode, durable timed close, and manual overrides
 - Remote MCP server with OAuth for ChatGPT, Codex, Claude, and other agents
 - REST API authenticated with the admin password
 - OpenAPI 3.1 document for agents without MCP support
@@ -72,6 +73,12 @@ docker compose up --build
 Open [http://localhost:8080](http://localhost:8080) and sign in with `BETTERPETDOOR_ADMIN_PASSWORD`.
 
 Keep `BETTERPETDOOR_SECRET_KEY` stable. Changing it makes saved door credentials unreadable. Changing the admin password on restart invalidates existing browser sessions.
+
+## Phone camera mode
+
+Use a camera page for local dog detection and explicitly arm the selected door. Automatic close defaults to five minutes and is configurable; physical provider safety checks must explicitly pass. Manual Open/Close overrides stop camera automation.
+
+**Timed closing requires one continuously running server.** The included Fly auto-stop configuration must be changed before relying on unattended timed closing. Stopping the camera retains a pending close; cancelling the close is a separate action. See [camera mode, safety, and recovery](docs/camera-mode.md) before using a real door.
 
 ## REST API
 

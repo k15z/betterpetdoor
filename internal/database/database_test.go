@@ -37,3 +37,44 @@ func TestDoorLifecycle(t *testing.T) {
 		t.Fatalf("got %v, want ErrNotFound", err)
 	}
 }
+
+func TestCameraStatePersistsAndCascades(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "camera.db")
+	db, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	if err := db.CreateDoor(ctx, Door{ID: "camera-door", Name: "Test", Provider: "wayzn", EncryptedCredentials: []byte("fake"), CreatedAt: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	if state, err := db.CameraState(ctx, "camera-door"); err != nil || state != nil {
+		t.Fatalf("new state %s %v", state, err)
+	}
+	want := []byte(`{"close_due_at":"2026-10-03T20:05:00Z","armed":false}`)
+	if err := db.SaveCameraState(ctx, "camera-door", want); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	db, err = Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	got, err := db.CameraState(ctx, "camera-door")
+	if err != nil || string(got) != string(want) {
+		t.Fatalf("%s %v", got, err)
+	}
+	if err := db.DeleteDoor(ctx, "camera-door"); err != nil {
+		t.Fatal(err)
+	}
+	ids, err := db.CameraDoorIDs(ctx)
+	if err != nil || len(ids) != 0 {
+		t.Fatalf("%v %v", ids, err)
+	}
+	if _, err := db.CameraState(ctx, "camera-door"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("missing door %v", err)
+	}
+}

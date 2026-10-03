@@ -78,6 +78,10 @@ CREATE TABLE IF NOT EXISTS doors (
     encrypted_credentials BLOB NOT NULL,
     created_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS camera_states (
+    door_id TEXT PRIMARY KEY REFERENCES doors(id) ON DELETE CASCADE,
+    state BLOB NOT NULL
+);
 CREATE TABLE IF NOT EXISTS oauth_codes (
     code_hash TEXT PRIMARY KEY,
     client_id TEXT NOT NULL,
@@ -351,4 +355,34 @@ func (db *DB) DeleteDoor(ctx context.Context, id string) error {
 		return ErrNotFound
 	}
 	return nil
+}
+
+// CameraState returns nil for an existing door with no camera configuration.
+func (db *DB) CameraState(ctx context.Context, id string) ([]byte, error) {
+	var state []byte
+	err := db.sql.QueryRowContext(ctx, `SELECT c.state FROM doors d LEFT JOIN camera_states c ON c.door_id = d.id WHERE d.id = ?`, id).Scan(&state)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return state, err
+}
+func (db *DB) SaveCameraState(ctx context.Context, id string, state []byte) error {
+	_, err := db.sql.ExecContext(ctx, `INSERT INTO camera_states(door_id, state) VALUES(?, ?) ON CONFLICT(door_id) DO UPDATE SET state = excluded.state`, id, state)
+	return err
+}
+func (db *DB) CameraDoorIDs(ctx context.Context) ([]string, error) {
+	rows, err := db.sql.QueryContext(ctx, `SELECT door_id FROM camera_states`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
 }

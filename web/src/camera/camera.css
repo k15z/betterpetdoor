@@ -1,0 +1,163 @@
+.camera-page {
+  min-height: 100vh;
+  background: var(--app-canvas);
+  color: var(--app-text);
+}
+.camera-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.camera-view-card {
+  overflow: hidden;
+}
+.camera-view {
+  position: relative;
+  min-height: 280px;
+  background: #101713;
+  overflow: hidden;
+}
+.camera-view video,
+.camera-view canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.camera-hidden {
+  display: none !important;
+}
+.camera-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
+  background: #101713;
+  color: #e9efe9;
+  padding: 24px;
+  text-align: center;
+}
+.camera-placeholder .mantine-Text-root {
+  color: #a7b7ac;
+}
+.camera-zone {
+  position: absolute;
+  border: 1px dashed #edc777;
+  pointer-events: none;
+}
+.camera-zone span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: #17271fcc;
+  color: #ffdb92;
+  font-size: 11px;
+  padding: 3px 5px;
+  white-space: nowrap;
+}
+.camera-zone.zone-1 {
+  border-color: #8bbedf;
+}
+.camera-zone.zone-1 span {
+  color: #addcff;
+}
+.camera-detection {
+  position: absolute;
+  border: 2px solid #aade8a;
+  pointer-events: none;
+}
+.camera-detection span {
+  position: absolute;
+  bottom: 100%;
+  left: -2px;
+  white-space: nowrap;
+  color: #152215;
+  background: #b9e59b;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 5px;
+}
+.camera-view.sampling {
+  cursor: crosshair;
+}
+.camera-sample-tip {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  background: #f1f5e7;
+  color: #243d28;
+  padding: 10px;
+  font-size: 13px;
+}
+.camera-sample-tip button {
+  float: right;
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.camera-manual {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.camera-manual .mantine-Button-root {
+  min-height: 58px;
+  font-size: 18px;
+}
+.camera-events {
+  max-height: 460px;
+  overflow: auto;
+}
+.camera-events > div {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--app-line);
+}
+.camera-page .mantine-Slider-root {
+  padding-block: 9px;
+}
+.camera-page .mantine-Tabs-tab {
+  min-height: 44px;
+}
+.camera-page .mantine-SegmentedControl-label {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+@media (max-width: 800px) {
+  .camera-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .camera-page .mantine-Container-root {
+    padding-inline: 14px;
+  }
+  .camera-view {
+    min-height: 250px;
+  }
+  .camera-page .mantine-Text-root[data-size="xs"] {
+    font-size: 13px;
+  }
+  .camera-manual .mantine-Button-root {
+    font-size: 18px;
+    min-height: 62px;
+  }
+}
+@media (max-width: 370px) {
+  .camera-manual .mantine-Button-root {
+    font-size: 16px;
+    padding-inline: 9px;
+  }
+  .camera-layout {
+    min-width: 0;
+  }
+  .camera-page .mantine-Tabs-tab {
+    padding-inline: 10px;
+  }
+}

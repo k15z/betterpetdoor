@@ -1,7 +1,7 @@
 .PHONY: build dev test
 
 build:
-	cd web && npm ci && npm run build
+	cd web && npm ci && npm run model:download && npm run build
 	go build -o bin/betterpetdoor ./cmd/betterpetdoor
 
 dev:
@@ -11,4 +11,4 @@ dev:
 
 test:
 	go test ./...
-	cd web && npm run build
+	cd web && npm test && npm run lint && npm run build

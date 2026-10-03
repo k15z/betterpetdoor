@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/k15z/betterpetdoor/internal/database"
+	"github.com/k15z/betterpetdoor/internal/doorcontrol"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -75,9 +76,9 @@ func (s *Server) newMCPHandler() http.Handler {
 		description string
 		value       string
 	}{
-		{"open_pet_door", "Open pet door", "Open one pet door.", "open"},
-		{"close_pet_door", "Close pet door", "Close one pet door.", "close"},
-		{"open_and_close_pet_door", "Open and close pet door", "Open one pet door, wait for its configured interval, then close it.", "open_and_close"},
+		{"open_pet_door", "Open pet door", "Open one pet door. Stops camera automation and cancels its pending automatic close.", "open"},
+		{"close_pet_door", "Close pet door", "Close one pet door only after a fresh provider safety check. Stops camera automation and cancels its pending automatic close.", "close"},
+		{"open_and_close_pet_door", "Open and close pet door", "Open one pet door, wait for its vendor-configured interval, then close it. Stops camera automation and cancels its pending automatic close.", "open_and_close"},
 	} {
 		command := command
 		mcp.AddTool(server, &mcp.Tool{
@@ -118,48 +119,30 @@ func (s *Server) mcpListDoors(ctx context.Context, _ *mcp.CallToolRequest, _ str
 }
 
 func (s *Server) mcpDoorStatus(ctx context.Context, _ *mcp.CallToolRequest, input mcpDoorInput) (*mcp.CallToolResult, mcpDoorStatusOutput, error) {
-	door, client, err := s.wayznClient(ctx, strings.TrimSpace(input.DoorID))
+	status, err := s.control.ReadStatus(ctx, strings.TrimSpace(input.DoorID))
 	if errors.Is(err, database.ErrNotFound) {
 		return nil, mcpDoorStatusOutput{}, errors.New("pet door not found")
 	}
 	if err != nil {
-		s.logger.Error("MCP door status setup failed", "door_id", input.DoorID, "error", err)
-		return nil, mcpDoorStatusOutput{}, errors.New("could not read the pet door")
-	}
-	status, err := client.ReadStatus(ctx)
-	if err != nil {
-		s.logger.Warn("MCP status request failed", "door_id", door.ID, "provider", door.Provider, "error", err)
+		s.logger.Warn("MCP status request failed", "door_id", input.DoorID, "error", err)
 		return nil, mcpDoorStatusOutput{}, errors.New("could not read the pet door status")
 	}
-	return nil, mcpDoorStatusOutput{
-		State:       status.State,
-		Online:      status.Online,
-		Open:        status.Open,
-		Moving:      status.Moving,
-		SafeToClose: status.SafeToClose,
-		CheckedAt:   status.CheckedAt,
-	}, nil
+	return nil, mcpDoorStatusOutput{State: status.State, Online: status.Online, Open: status.Open, Moving: status.Moving, SafeToClose: status.SafeToClose, CheckedAt: status.CheckedAt}, nil
 }
-
 func (s *Server) mcpDoorCommand(ctx context.Context, input mcpDoorInput, command string) (*mcp.CallToolResult, mcpCommandOutput, error) {
 	doorID := strings.TrimSpace(input.DoorID)
-	door, client, err := s.wayznClient(ctx, doorID)
+	err := s.control.Command(ctx, doorID, command)
 	if errors.Is(err, database.ErrNotFound) {
 		return nil, mcpCommandOutput{}, errors.New("pet door not found")
 	}
+	if errors.Is(err, doorcontrol.ErrUnsafe) {
+		return nil, mcpCommandOutput{}, errors.New("close held: fresh provider status did not confirm safe closure; no close command sent. Camera automation and its pending close were cancelled")
+	}
 	if err != nil {
-		s.logger.Error("MCP door command setup failed", "door_id", doorID, "command", command, "error", err)
-		return nil, mcpCommandOutput{}, errors.New("could not control the pet door")
+		s.logger.Warn("MCP door command failed", "door_id", doorID, "command", command, "error", err)
+		return nil, mcpCommandOutput{}, errors.New("command not confirmed; check the door and camera status before retrying")
 	}
-	if err := client.Command(ctx, command); err != nil {
-		s.logger.Warn("MCP door command failed", "door_id", door.ID, "provider", door.Provider, "command", command, "error", err)
-		return nil, mcpCommandOutput{}, errors.New("the pet door did not accept the command")
-	}
-	return nil, mcpCommandOutput{
-		OK:      true,
-		DoorID:  door.ID,
-		Command: strings.ReplaceAll(command, "_", "-"),
-	}, nil
+	return nil, mcpCommandOutput{OK: true, DoorID: doorID, Command: strings.ReplaceAll(command, "_", "-")}, nil
 }
 
 func boolPointer(value bool) *bool { return &value }

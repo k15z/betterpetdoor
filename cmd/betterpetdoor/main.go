@@ -59,7 +59,7 @@ func run(logger *slog.Logger) error {
 		logger.Warn("could not remove expired OAuth data", "error", err)
 	}
 
-	handler := httpapi.New(httpapi.Config{
+	api := httpapi.New(httpapi.Config{
 		Database:            db,
 		Auth:                authService,
 		Box:                 box,
@@ -67,11 +67,11 @@ func run(logger *slog.Logger) error {
 		WebDirectory:        envOr("BETTERPETDOOR_WEB_DIR", "./web/dist"),
 		SecureCookie:        strings.EqualFold(os.Getenv("BETTERPETDOOR_SECURE_COOKIE"), "true"),
 		Logger:              logger,
-	}).Handler()
+	})
 
 	server := &http.Server{
 		Addr:              envOr("BETTERPETDOOR_ADDR", ":8080"),
-		Handler:           handler,
+		Handler:           api.Handler(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      20 * time.Second,
@@ -80,6 +80,9 @@ func run(logger *slog.Logger) error {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	workerDone := make(chan struct{})
+	go func() { defer close(workerDone); api.RunCameraWorker(ctx) }()
+	defer func() { stop(); <-workerDone }()
 	go func() {
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
