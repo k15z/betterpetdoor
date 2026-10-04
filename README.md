@@ -78,7 +78,7 @@ Keep `BETTERPETDOOR_SECRET_KEY` stable. Changing it makes saved door credentials
 
 Use a camera page for local dog detection and explicitly arm the selected door. Automatic close defaults to five minutes and is configurable; physical provider safety checks must explicitly pass. Manual Open/Close overrides stop camera automation.
 
-**Timed closing requires one continuously running server.** The included Fly auto-stop configuration must be changed before relying on unattended timed closing. Stopping the camera retains a pending close; cancelling the close is a separate action. See [camera mode, safety, and recovery](docs/camera-mode.md) before using a real door.
+**Timed closing is triggered by the mounted phone.** Keep the camera page open and the phone awake and connected. Its close request wakes an auto-stopped server. Stopping detection retains the timer while the page stays open; cancelling the close is a separate action. See [camera mode, safety, and recovery](docs/camera-mode.md) before using a real door.
 
 ## REST API
 

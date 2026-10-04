@@ -62,7 +62,7 @@ func cameraRequest(s *Server, method, path, body string, auth bool) *httptest.Re
 }
 func TestCameraRoutesAuthenticationAndValidation(t *testing.T) {
 	s, _ := cameraServer(t)
-	for _, path := range []string{"/api/doors/door/camera", "/api/doors/door/camera/arm", "/api/doors/door/camera/detections", "/api/doors/door/camera/cancel-close"} {
+	for _, path := range []string{"/api/doors/door/camera", "/api/doors/door/camera/arm", "/api/doors/door/camera/detections", "/api/doors/door/camera/cancel-close", "/api/doors/door/camera/check-close"} {
 		w := cameraRequest(s, "POST", path, `{}`, false)
 		if w.Code != 401 {
 			t.Fatalf("%s %d", path, w.Code)
@@ -120,9 +120,8 @@ func TestDeleteDoorCascadesCameraState(t *testing.T) {
 	if w.Code != 204 {
 		t.Fatal(w.Body.String())
 	}
-	ids, err := s.db.CameraDoorIDs(context.Background())
-	if err != nil || len(ids) != 0 {
-		t.Fatalf("%v %v", ids, err)
+	if _, err := s.db.CameraState(context.Background(), "door"); err != database.ErrNotFound {
+		t.Fatalf("deleted door state: %v", err)
 	}
 }
 func TestCameraHTTPStopPreservesClose(t *testing.T) {
@@ -167,5 +166,42 @@ func TestManualCloseRejectsSafetyChangeAfterUIPoll(t *testing.T) {
 	state, _ := s.control.State(context.Background(), "door")
 	if len(p.commands) != 1 || state.Armed || state.CloseDueAt != nil {
 		t.Fatalf("%v %+v", p.commands, state)
+	}
+}
+
+func TestPhoneRequestsDueClose(t *testing.T) {
+	s, p := cameraServer(t)
+	now := time.Now()
+	s.control = doorcontrol.New(s.db, func(context.Context, string) (doorcontrol.Provider, error) { return p, nil }, func() time.Time { return now })
+	for _, tc := range []struct{ action, body string }{
+		{"arm", `{"session_id":"valid-session"}`},
+		{"detections", `{"session_id":"valid-session","event_id":"event-one"}`},
+		{"check-close", `{}`},
+	} {
+		w := cameraRequest(s, "POST", "/api/doors/door/camera/"+tc.action, tc.body, true)
+		if w.Code != 200 {
+			t.Fatal(w.Body.String())
+		}
+	}
+	if len(p.commands) != 1 {
+		t.Fatal("closed before deadline", p.commands)
+	}
+	now = now.Add(5 * time.Minute)
+	// Lease expiry does not invalidate the scheduled close.
+	p.unsafe = true
+	w := cameraRequest(s, "POST", "/api/doors/door/camera/check-close", `{}`, true)
+	if w.Code != 200 || len(p.commands) != 1 {
+		t.Fatal("unsafe close", w.Body.String(), p.commands)
+	}
+	p.unsafe = false
+	now = now.Add(15 * time.Second)
+	for i := 0; i < 2; i++ {
+		w = cameraRequest(s, "POST", "/api/doors/door/camera/check-close", `{}`, true)
+		if w.Code != 200 {
+			t.Fatal(w.Body.String())
+		}
+	}
+	if len(p.commands) != 2 || p.commands[1] != "close" {
+		t.Fatal(p.commands)
 	}
 }

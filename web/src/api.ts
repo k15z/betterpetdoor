@@ -115,6 +115,11 @@ export const cameraApi = {
       `/api/doors/${encodeURIComponent(id)}/camera/disarm`,
       { method: "POST", keepalive: true, body: JSON.stringify({ session_id }) },
     ),
+  checkClose: (id: string) =>
+    request<CameraSession>(
+      `/api/doors/${encodeURIComponent(id)}/camera/check-close`,
+      { method: "POST", body: JSON.stringify({}) },
+    ),
   cancelClose: (id: string) =>
     request<CameraSession>(
       `/api/doors/${encodeURIComponent(id)}/camera/cancel-close`,

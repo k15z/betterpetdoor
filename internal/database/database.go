@@ -370,19 +370,3 @@ func (db *DB) SaveCameraState(ctx context.Context, id string, state []byte) erro
 	_, err := db.sql.ExecContext(ctx, `INSERT INTO camera_states(door_id, state) VALUES(?, ?) ON CONFLICT(door_id) DO UPDATE SET state = excluded.state`, id, state)
 	return err
 }
-func (db *DB) CameraDoorIDs(ctx context.Context) ([]string, error) {
-	rows, err := db.sql.QueryContext(ctx, `SELECT door_id FROM camera_states`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var ids []string
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		ids = append(ids, id)
-	}
-	return ids, rows.Err()
-}

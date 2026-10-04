@@ -1,3 +1,4 @@
+import { useClientCloseTimer } from "./useClientCloseTimer";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActionIcon,
@@ -250,6 +251,12 @@ export default function CameraMonitor({
       clearInterval(t);
     };
   }, [refresh]);
+  useClientCloseTimer(
+    door.id,
+    testOnly ? null : session?.close_due_at ?? null,
+    saveSession,
+    setError,
+  );
   useEffect(() => {
     if (!armed) return;
     const tick = () => {
@@ -937,8 +944,8 @@ export default function CameraMonitor({
                     {new Date(session.close_due_at).toLocaleTimeString()}
                   </Text>
                   <Text size="xs">
-                    It remains scheduled if the phone stops, locks, disconnects,
-                    or auto mode is disarmed. Hardware safety may hold it open.
+                    Keep this page open and the phone awake and connected.
+                    Disarming detection retains this timer. Hardware safety may hold it open.
                   </Text>
                   <Button
                     mt="sm"
@@ -958,9 +965,8 @@ export default function CameraMonitor({
                 </Text>
               )}
               <Text size="xs" c="dimmed" mt="sm">
-                The server must remain running for the timer to fire. Current
-                Fly auto-stop settings require a deployment change before
-                reliable unattended use.
+                This phone triggers closing and wakes the server if needed.
+                Closing pauses if this page is closed or suspended, or the phone disconnects.
               </Text>
             </Paper>
             <Paper withBorder p="md">
@@ -1221,7 +1227,7 @@ export default function CameraMonitor({
           <Stack>
             <Text size="sm">
               This enables real automatic opening of this selected door on
-              confirmed dog detections. A server-side close is scheduled {delay}{" "}
+              confirmed dog detections. This phone requests closing {delay}{" "}
               minutes after each camera-triggered opening. The model can be
               wrong.
             </Text>

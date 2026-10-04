@@ -200,6 +200,7 @@ func addCameraOpenAPI(spec map[string]any) {
 		{"heartbeat", "Renew an owned camera lease for 45 seconds", []string{"session_id"}},
 		{"disarm", "Stop new openings; retain any pending automatic close", []string{"session_id"}},
 		{"detections", "Submit a local dog detection event; never send images", []string{"session_id", "event_id"}},
+		{"check-close", "Check a due close at the phone timer request; require fresh provider safety", nil},
 		{"cancel-close", "Cancel automatic close and disarm; physically inspect the door", nil},
 	} {
 		properties := map[string]any{}

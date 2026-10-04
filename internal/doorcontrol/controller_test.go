@@ -31,15 +31,6 @@ func (s *fakeStore) SaveCameraState(_ context.Context, id string, b []byte) erro
 	s.data[id] = append([]byte(nil), b...)
 	return nil
 }
-func (s *fakeStore) CameraDoorIDs(context.Context) ([]string, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	var ids []string
-	for id := range s.data {
-		ids = append(ids, id)
-	}
-	return ids, nil
-}
 
 type fakeProvider struct {
 	status                wayzn.Status
@@ -92,9 +83,9 @@ func detect(t *testing.T, c *Controller, event string) State {
 	}
 	return s
 }
-func tick(t *testing.T, c *Controller) {
+func requestClose(t *testing.T, c *Controller) {
 	t.Helper()
-	if err := c.Tick(context.Background()); err != nil {
+	if _, err := c.CheckClose(context.Background(), "door"); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -160,7 +151,7 @@ func TestStopCameraRetainsCloseAndCancelRemovesIt(t *testing.T) {
 			}
 			p.status = openStatus()
 			*now = now.Add(5 * time.Minute)
-			tick(t, c)
+			requestClose(t, c)
 			want := 2
 			if cancel {
 				want = 1
@@ -191,7 +182,7 @@ func TestManualOverridesEvenFailure(t *testing.T) {
 					t.Fatalf("override %+v", s)
 				}
 				*now = now.Add(10 * time.Minute)
-				tick(t, c)
+				requestClose(t, c)
 				if len(p.commands) != 2 {
 					t.Fatal(p.commands)
 				}
@@ -209,7 +200,7 @@ func TestRestartRecoveryVerifiesSafetyAndConfirmation(t *testing.T) {
 	p.status = openStatus()
 	*now = now.Add(10 * time.Minute)
 	restarted := New(store, c.provider, c.now)
-	tick(t, restarted)
+	requestClose(t, restarted)
 	if len(p.commands) != 2 || p.commands[1] != "close" {
 		t.Fatal(p.commands)
 	}
@@ -217,9 +208,9 @@ func TestRestartRecoveryVerifiesSafetyAndConfirmation(t *testing.T) {
 	if s.CloseDueAt == nil || s.Status != "closing" {
 		t.Fatalf("must await confirmation: %+v", s)
 	}
-	*now = now.Add(RetryInterval)
+	*now = now.Add(15 * time.Second)
 	p.status = closedStatus()
-	tick(t, restarted)
+	requestClose(t, restarted)
 	s, _ = restarted.State(context.Background(), "door")
 	if s.CloseDueAt != nil || s.Status != "closed" {
 		t.Fatalf("%+v", s)
@@ -252,14 +243,14 @@ func TestAutomaticCloseHoldsUnsafeUnknownOrMoving(t *testing.T) {
 			detect(t, c, "event-one")
 			p.status = status
 			*now = now.Add(5 * time.Minute)
-			tick(t, c)
+			requestClose(t, c)
 			s, _ := c.State(context.Background(), "door")
 			if len(p.commands) != 1 || s.CloseDueAt == nil || s.Status != "close_held" {
 				t.Fatalf("%v %+v", p.commands, s)
 			}
 			p.status = openStatus()
-			*now = now.Add(RetryInterval)
-			tick(t, c)
+			*now = now.Add(15 * time.Second)
+			requestClose(t, c)
 			if len(p.commands) != 2 {
 				t.Fatal(p.commands)
 			}
@@ -306,10 +297,10 @@ func TestAmbiguousOpenAndCloseNotRetried(t *testing.T) {
 	}
 	p.status = openStatus()
 	*now = now.Add(5 * time.Minute)
-	tick(t, c)
+	requestClose(t, c)
 	restarted := New(store, c.provider, c.now)
 	*now = now.Add(time.Minute)
-	tick(t, restarted)
+	requestClose(t, restarted)
 	s, _ = restarted.State(context.Background(), "door")
 	if len(p.commands) != 2 || s.Status != "close_unconfirmed" || s.CloseDueAt == nil {
 		t.Fatalf("%v %+v", p.commands, s)
@@ -417,7 +408,7 @@ func TestPersistFailureBeforeAutoCloseSendsNoClose(t *testing.T) {
 	p.status = openStatus()
 	*now = now.Add(5 * time.Minute)
 	store.fail = true
-	if err := c.Tick(context.Background()); err == nil {
+	if _, err := c.CheckClose(context.Background(), "door"); err == nil {
 		t.Fatal("expected storage failure")
 	}
 	if len(p.commands) != 1 {

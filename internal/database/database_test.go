@@ -70,10 +70,6 @@ func TestCameraStatePersistsAndCascades(t *testing.T) {
 	if err := db.DeleteDoor(ctx, "camera-door"); err != nil {
 		t.Fatal(err)
 	}
-	ids, err := db.CameraDoorIDs(ctx)
-	if err != nil || len(ids) != 0 {
-		t.Fatalf("%v %v", ids, err)
-	}
 	if _, err := db.CameraState(ctx, "camera-door"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("missing door %v", err)
 	}

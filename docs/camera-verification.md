@@ -60,7 +60,7 @@ it is not bit-identical to browser Canvas resizing and not a phone-speed test.
   download/build sequence was updated, but a container image was not built.
 
 Before unattended use, test the actual phone and both dogs in representative
-lighting, verify independent physical safety sensing, and arrange one continuously
-running server with persistent SQLite. Stopping/locking the phone stops new
-camera-triggered openings; an already scheduled close remains active until
-explicitly canceled and always depends on a fresh provider safety check.
+lighting and verify independent physical safety sensing. Keep the mounted phone
+awake, connected, and on the camera page. Closing is triggered by its timer;
+server restarts retain the deadline but do not execute it without a client
+request. Stopping detection retains the timer while the page stays open.

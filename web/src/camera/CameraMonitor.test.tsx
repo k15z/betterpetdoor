@@ -23,6 +23,7 @@ const fakes = vi.hoisted(() => ({
     heartbeat: vi.fn(),
     detection: vi.fn(),
     cancelClose: vi.fn(),
+    checkClose: vi.fn(),
   },
   monitor: null as unknown as ReturnType<typeof useCameraMonitor>,
   onPause: null as null | (() => void),
@@ -154,6 +155,7 @@ beforeEach(() => {
   });
   fakes.cameraApi.heartbeat.mockImplementation(async () => fakes.server);
   fakes.cameraApi.detection.mockImplementation(async () => fakes.server);
+  fakes.cameraApi.checkClose.mockImplementation(async () => fakes.server);
   fakes.cameraApi.cancelClose.mockImplementation(async () => fakes.server);
   fakes.monitor = {
     state: "live",
@@ -200,6 +202,7 @@ afterEach(() => {
   cleanup();
   expect(fetch).not.toHaveBeenCalled();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("CameraMonitor real React lifecycle with fake services", () => {
@@ -339,5 +342,55 @@ describe("CameraMonitor real React lifecycle with fake services", () => {
       await pending.promise;
     });
     expect(fakes.cameraApi.detection).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("phone close timer", () => {
+  it("waits for the deadline after disarming, retries holds, and stops after confirmation", async () => {
+    vi.useFakeTimers();
+    fakes.server = { ...baseSession(), close_due_at: new Date(Date.now() + 60000).toISOString() };
+    fakes.cameraApi.checkClose.mockImplementation(async () => {
+      if (fakes.cameraApi.checkClose.mock.calls.length === 2)
+        fakes.server = { ...fakes.server, close_due_at: null };
+      return fakes.server;
+    });
+    render(page());
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(59999); });
+    expect(fakes.cameraApi.checkClose).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(fakes.cameraApi.checkClose).toHaveBeenCalledWith(door.id);
+    await act(async () => { await vi.advanceTimersByTimeAsync(15000); });
+    expect(fakes.cameraApi.checkClose).toHaveBeenCalledTimes(2);
+    await act(async () => { await vi.advanceTimersByTimeAsync(30000); });
+    expect(fakes.cameraApi.checkClose).toHaveBeenCalledTimes(2);
+    expect(fakes.api.command).not.toHaveBeenCalled();
+  });
+
+  it("retries a failed request and clears its timer on page exit", async () => {
+    vi.useFakeTimers();
+    fakes.server = { ...baseSession(), close_due_at: new Date(Date.now() - 1000).toISOString() };
+    fakes.cameraApi.checkClose.mockRejectedValueOnce(new Error("offline"));
+    const view = render(page());
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(fakes.cameraApi.checkClose).toHaveBeenCalledTimes(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(15000); });
+    expect(fakes.cameraApi.checkClose).toHaveBeenCalledTimes(2);
+    view.unmount();
+    await act(async () => { await vi.advanceTimersByTimeAsync(30000); });
+    expect(fakes.cameraApi.checkClose).toHaveBeenCalledTimes(2);
+  });
+
+  it("cancels the timer when the server deadline is cleared", async () => {
+    vi.useFakeTimers();
+    fakes.server = { ...baseSession(), close_due_at: new Date(Date.now() + 60000).toISOString() };
+    render(page());
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    fakes.server = { ...fakes.server, close_due_at: null, updated_at: new Date().toISOString() };
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(57000); });
+    expect(fakes.cameraApi.checkClose).not.toHaveBeenCalled();
   });
 });

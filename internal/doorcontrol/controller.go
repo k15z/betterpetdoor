@@ -15,7 +15,6 @@ import (
 
 const DefaultCloseSeconds = 300
 const LeaseDuration = 45 * time.Second
-const RetryInterval = 15 * time.Second
 const Cooldown = 30 * time.Second
 
 var (
@@ -28,7 +27,6 @@ var (
 type Store interface {
 	CameraState(context.Context, string) ([]byte, error)
 	SaveCameraState(context.Context, string, []byte) error
-	CameraDoorIDs(context.Context) ([]string, error)
 }
 type Provider interface {
 	ReadStatus(context.Context) (wayzn.Status, error)
@@ -50,9 +48,8 @@ type State struct {
 }
 type record struct {
 	State
-	NextCheckAt    *time.Time `json:"next_check_at,omitempty"`
-	CloseAttempted bool       `json:"close_attempted,omitempty"`
-	EventIDs       []string   `json:"event_ids,omitempty"`
+	CloseAttempted bool     `json:"close_attempted,omitempty"`
+	EventIDs       []string `json:"event_ids,omitempty"`
 }
 type Controller struct {
 	store    Store
@@ -187,7 +184,6 @@ func (c *Controller) CancelClose(ctx context.Context, id string) (State, error) 
 	}
 	disarm(&r)
 	r.CloseDueAt = nil
-	r.NextCheckAt = nil
 	r.CloseAttempted = false
 	r.Status = "cancelled"
 	r.Message = "Automatic close cancelled. Check and control the door manually."
@@ -241,7 +237,6 @@ func (c *Controller) Detect(ctx context.Context, id, session, event string) (Sta
 	// timeout retains a close deadline; provider status determines what happens.
 	due := c.now().UTC().Add(time.Duration(r.AutoCloseSeconds) * time.Second)
 	r.CloseDueAt = &due
-	r.NextCheckAt = &due
 	r.CloseAttempted = false
 	r.Status = "opening"
 	r.Message = "Open requested. Automatic close is scheduled, subject to the door safety check."
@@ -274,7 +269,6 @@ func (c *Controller) Command(ctx context.Context, id, command string) error {
 	}
 	disarm(&r)
 	r.CloseDueAt = nil
-	r.NextCheckAt = nil
 	r.CloseAttempted = false
 	r.Status = "manual_override"
 	r.Message = "Manual control stopped camera automation and cancelled its pending close."
@@ -319,7 +313,6 @@ func (c *Controller) ReadStatus(ctx context.Context, id string) (wayzn.Status, e
 func (c *Controller) WithDoor(id string, fn func() error) error { defer c.lock(id)(); return fn() }
 func (c *Controller) complete(r *record) {
 	r.CloseDueAt = nil
-	r.NextCheckAt = nil
 	r.CloseAttempted = false
 	cooldown := c.now().UTC().Add(Cooldown)
 	r.CooldownUntil = &cooldown
@@ -332,11 +325,9 @@ func (c *Controller) check(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	if r.CloseDueAt == nil || c.now().Before(*r.CloseDueAt) || r.NextCheckAt != nil && c.now().Before(*r.NextCheckAt) {
+	if r.CloseDueAt == nil || c.now().Before(*r.CloseDueAt) {
 		return nil
 	}
-	next := c.now().UTC().Add(RetryInterval)
-	r.NextCheckAt = &next
 	p, err := c.provider(ctx, id)
 	if err != nil {
 		r.Status = "close_held"
@@ -377,41 +368,13 @@ func (c *Controller) check(ctx context.Context, id string) error {
 	return nil
 }
 
-// Tick is also used by deterministic tests. Provider reads and commands are only
-// performed for a due close. Safety holds retry status reads every 15 seconds.
-func (c *Controller) Tick(ctx context.Context) error {
-	ids, err := c.store.CameraDoorIDs(ctx)
-	if err != nil {
-		return err
+// CheckClose is invoked by the mounted phone's timer. The stored deadline,
+// cancellation and attempt state remain authoritative across clients/restarts.
+func (c *Controller) CheckClose(ctx context.Context, id string) (State, error) {
+	if err := c.check(ctx, id); err != nil {
+		return State{}, err
 	}
-	var result error
-	for _, id := range ids {
-		checkCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
-		err := c.check(checkCtx, id)
-		cancel()
-		if err != nil {
-			result = errors.Join(result, err)
-		}
-	}
-	return result
-}
-func (c *Controller) Run(ctx context.Context, onError func(error)) {
-	tick := func() {
-		if err := c.Tick(ctx); err != nil && onError != nil {
-			onError(err)
-		}
-	}
-	tick()
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			tick()
-		}
-	}
+	return c.State(ctx, id)
 }
 
 func (c *Controller) saveState(ctx context.Context, r *record) (State, error) {

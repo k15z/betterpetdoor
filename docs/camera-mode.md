@@ -11,19 +11,17 @@ this is a convenience feature, not a physical safety sensor.
 - Use HTTPS (or localhost), allow camera access, and keep the camera page visible
   and the device awake. A backgrounded, suspended, disconnected or locked browser
   cannot reliably detect a dog. Start in test mode and explicitly arm each time.
-- Run **one continuously running Better Pet Door server** with its SQLite volume.
-  The included `fly.toml` still enables auto-stop with zero minimum machines. That
-  default is **not sufficient for unattended timed closing**: a stored deadline
-  cannot wake a stopped machine. Before relying on automatic closing, explicitly
-  arrange an always-running deployment (disable Fly auto-stop and maintain at
-  least one running machine, or equivalent on your host). This change does not
-  modify or deploy infrastructure. Heartbeats while a page is open are not a
-  substitute for that operating requirement.
+- Keep the mounted phone awake, connected, and on the camera page. The phone
+  requests closing at the deadline, waking an auto-stopped server through HTTP.
+  There is no server background close worker. If the page exits or the browser
+  suspends, closing waits until a camera page resumes and requests the overdue
+  close. The persisted deadline alone never wakes the server. Use one server
+  process at a time with persistent SQLite; concurrent servers are unsupported.
 - Keep the vendor's physical safety sensors functional. Automatic closing requires
   a fresh provider status request showing `online: true`, `moving: false`, a known
   open state, and `safe_to_close: true`. Missing connectivity or safety data, a
   moving door, obstruction, heat, offline state, unknown state or provider errors
-  **hold the close**. The worker checks again every 15 seconds. The provider's
+  **hold the close**. The phone requests another check every 15 seconds. The provider's
   snapshot and its sensors are still the source of truth; the app cannot certify
   their accuracy or physical freshness. Camera non-detection never means safe.
 - Verify status in the UI and supervise initial tests. Unknown safety can mean
@@ -38,8 +36,9 @@ not extend it. Detection will only send open for a door confirmed online,
 stationary and closed; it never takes close ownership of a door already open.
 
 Stop camera/disarm stops new automatic openings but **retains an existing close
-schedule**. This means the server can still close a door after the camera page
-has stopped, subject to the provider safety check. Use **Cancel automatic close**
+schedule**. The phone retains its close timer while the camera page stays open, even if
+detection is stopped or disarmed. Closing cannot run while the page is closed,
+suspended, or disconnected. Use **Cancel automatic close**
 to clear the deadline and disarm; inspect the door and control it manually.
 
 The existing manual Open, Close, and vendor Open-and-close commands, through both
@@ -69,8 +68,9 @@ permission, so this lease prevents accidental conflicting clients rather than
 providing a separate security boundary.
 
 Close deadlines, command intents, and the most recent 512 detection IDs persist
-in SQLite. On restart, overdue deadlines are recovered and provider safety is
-checked before any close. No close can run while the host/process is stopped.
+in SQLite. On server restart, deadlines remain stored but no close runs automatically.
+When a camera page loads it resumes the stored deadline, requesting an overdue
+close immediately. Each request checks provider safety before any close.
 All status, manual commands, camera events, and deletion are serialized per door
 inside the one server process. Multiple active servers sharing a database are not
 supported. Deleting a door removes its camera state and stops its managed close;
@@ -90,6 +90,7 @@ No camera frames or image data belong in these requests.
 | POST | `/camera/heartbeat` | `{"session_id":"browser-uuid"}` |
 | POST | `/camera/detections` | `{"session_id":"browser-uuid","event_id":"event-uuid"}` |
 | POST | `/camera/disarm` | `{"session_id":"browser-uuid"}` |
+| POST | `/camera/check-close` | `{}` |
 | POST | `/camera/cancel-close` | `{}` |
 
 Responses include `armed`, `session_id`, `auto_close_seconds`, `close_due_at`,
@@ -162,5 +163,5 @@ Local preferences are stored per door only in the current browser. Activity logs
 are memory-only. Screen Wake Lock is best effort; Android's powered stay-awake
 setting may help, but cannot defeat browser suspension or guarantee continued
 inference. Camera interruption, frozen frames, a hidden page, stop, or route exit
-invalidate new opening observations and disarm ownership. Existing scheduled
-closes are independent and retain the explicit semantics described above.
+invalidate new opening observations and disarm ownership. Stopping detection retains the client close timer while this page stays open.
+Leaving the page stops that timer; reopening resumes the persisted deadline.

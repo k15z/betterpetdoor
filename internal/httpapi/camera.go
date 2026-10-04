@@ -1,7 +1,6 @@
 package httpapi
 
 import (
-	"context"
 	"errors"
 	"net/http"
 
@@ -9,11 +8,6 @@ import (
 	"github.com/k15z/betterpetdoor/internal/doorcontrol"
 )
 
-// RunCameraWorker must run for the lifetime of the single server process. A
-// persisted deadline cannot wake a suspended/auto-stopped hosting machine.
-func (s *Server) RunCameraWorker(ctx context.Context) {
-	s.control.Run(ctx, func(err error) { s.logger.Error("camera close worker failed", "error", err) })
-}
 func (s *Server) cameraRoute(w http.ResponseWriter, r *http.Request, id, action string) {
 	var state doorcontrol.State
 	var err error
@@ -51,12 +45,16 @@ func (s *Server) cameraRoute(w http.ResponseWriter, r *http.Request, id, action 
 				return
 			}
 			state, err = s.control.Detect(r.Context(), id, body.SessionID, body.EventID)
-		case "cancel-close":
+		case "check-close", "cancel-close":
 			var body struct{}
 			if decodeJSON(w, r, &body) != nil {
 				return
 			}
-			state, err = s.control.CancelClose(r.Context(), id)
+			if action == "check-close" {
+				state, err = s.control.CheckClose(r.Context(), id)
+			} else {
+				state, err = s.control.CancelClose(r.Context(), id)
+			}
 		default:
 			writeError(w, http.StatusNotFound, "Not found.")
 			return

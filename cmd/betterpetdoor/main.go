@@ -80,9 +80,6 @@ func run(logger *slog.Logger) error {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	workerDone := make(chan struct{})
-	go func() { defer close(workerDone); api.RunCameraWorker(ctx) }()
-	defer func() { stop(); <-workerDone }()
 	go func() {
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
