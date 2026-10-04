@@ -19,6 +19,7 @@ import (
 	"github.com/k15z/betterpetdoor/internal/auth"
 	"github.com/k15z/betterpetdoor/internal/cryptobox"
 	"github.com/k15z/betterpetdoor/internal/database"
+	"github.com/k15z/betterpetdoor/internal/doorcontrol"
 	"github.com/k15z/betterpetdoor/internal/providers/wayzn"
 )
 
@@ -33,6 +34,8 @@ type Config struct {
 	SecureCookie        bool
 	Logger              *slog.Logger
 	HTTPClient          *http.Client
+	ProviderFactory     doorcontrol.Factory
+	Now                 func() time.Time
 }
 
 type Server struct {
@@ -45,6 +48,7 @@ type Server struct {
 	logger              *slog.Logger
 	httpClient          *http.Client
 	mux                 *http.ServeMux
+	control             *doorcontrol.Controller
 }
 
 type publicDoor struct {
@@ -69,6 +73,14 @@ func New(config Config) *Server {
 		webDirectory:        config.WebDirectory, secureCookie: config.SecureCookie,
 		logger: logger, httpClient: client, mux: http.NewServeMux(),
 	}
+	factory := config.ProviderFactory
+	if factory == nil {
+		factory = func(ctx context.Context, id string) (doorcontrol.Provider, error) {
+			_, client, err := s.wayznClient(ctx, id)
+			return client, err
+		}
+	}
+	s.control = doorcontrol.New(s.db, factory, config.Now)
 	s.routes()
 	return s
 }
@@ -219,6 +231,14 @@ func (s *Server) createDoor(w http.ResponseWriter, r *http.Request) {
 func (s *Server) doorRoute(w http.ResponseWriter, r *http.Request) {
 	path := strings.Trim(strings.TrimPrefix(r.URL.Path, "/api/doors/"), "/")
 	parts := strings.Split(path, "/")
+	if len(parts) >= 2 && len(parts) <= 3 && parts[0] != "" && parts[1] == "camera" {
+		action := ""
+		if len(parts) == 3 {
+			action = parts[2]
+		}
+		s.cameraRoute(w, r, parts[0], action)
+		return
+	}
 	if len(parts) == 1 && parts[0] != "" && r.Method == http.MethodDelete {
 		s.deleteDoor(w, r, parts[0])
 		return
@@ -236,7 +256,7 @@ func (s *Server) doorRoute(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) deleteDoor(w http.ResponseWriter, r *http.Request, id string) {
-	err := s.db.DeleteDoor(r.Context(), id)
+	err := s.control.WithDoor(id, func() error { return s.db.DeleteDoor(r.Context(), id) })
 	if errors.Is(err, database.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "Door not found.")
 		return
@@ -249,41 +269,35 @@ func (s *Server) deleteDoor(w http.ResponseWriter, r *http.Request, id string) {
 }
 
 func (s *Server) doorStatus(w http.ResponseWriter, r *http.Request, id string) {
-	door, client, err := s.wayznClient(r.Context(), id)
+	status, err := s.control.ReadStatus(r.Context(), id)
 	if errors.Is(err, database.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "Door not found.")
 		return
 	}
 	if err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	status, err := client.ReadStatus(r.Context())
-	if err != nil {
-		s.logger.Warn("status request failed", "door_id", door.ID, "provider", door.Provider, "error", err)
+		s.logger.Warn("status request failed", "door_id", id, "error", err)
 		writeError(w, http.StatusBadGateway, "Could not read the door status.")
 		return
 	}
 	writeJSON(w, http.StatusOK, status)
 }
-
 func (s *Server) doorCommand(w http.ResponseWriter, r *http.Request, id, command string) {
 	if command != "open" && command != "close" && command != "open_and_close" {
 		writeError(w, http.StatusNotFound, "Unknown command.")
 		return
 	}
-	door, client, err := s.wayznClient(r.Context(), id)
+	err := s.control.Command(r.Context(), id, command)
 	if errors.Is(err, database.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "Door not found.")
 		return
 	}
-	if err != nil {
-		s.internalError(w, r, err)
+	if errors.Is(err, doorcontrol.ErrUnsafe) {
+		writeError(w, http.StatusConflict, "Close held: a fresh status must confirm the door is online, stationary and safe to close. No close command was sent. Camera automation and its pending close were cancelled.")
 		return
 	}
-	if err := client.Command(r.Context(), command); err != nil {
-		s.logger.Warn("door command failed", "door_id", door.ID, "provider", door.Provider, "command", command, "error", err)
-		writeError(w, http.StatusBadGateway, "The door did not accept the command.")
+	if err != nil {
+		s.logger.Warn("door command failed", "door_id", id, "command", command, "error", err)
+		writeError(w, http.StatusBadGateway, "The command was not confirmed. Check the door and camera status before retrying.")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "command": strings.ReplaceAll(command, "_", "-")})
@@ -365,9 +379,18 @@ func (s *Server) serveWeb(w http.ResponseWriter, r *http.Request) {
 	if path != "" && fs.ValidPath(path) {
 		candidate := filepath.Join(s.webDirectory, filepath.FromSlash(path))
 		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+			if strings.HasPrefix(path, "models/") && filepath.Ext(path) == "" {
+				w.Header().Set("Content-Type", "application/octet-stream")
+			}
 			http.ServeFile(w, r, candidate)
 			return
 		}
+	}
+	// Missing model weights/scripts must fail clearly, rather than return the
+	// SPA HTML with a misleading success response during model initialization.
+	if path == "models" || path == "assets" || strings.HasPrefix(path, "models/") || strings.HasPrefix(path, "assets/") {
+		http.NotFound(w, r)
+		return
 	}
 	index := filepath.Join(s.webDirectory, "index.html")
 	if _, err := os.Stat(index); err != nil {

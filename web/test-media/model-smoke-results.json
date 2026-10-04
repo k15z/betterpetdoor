@@ -1,0 +1,557 @@
+{
+  "generatedAt": "2026-10-03T20:55:26.006Z",
+  "runtime": "v24.19.0",
+  "platform": "linux",
+  "architecture": "x64",
+  "backend": "cpu",
+  "model": "COCO-SSD lite_mobilenet_v2",
+  "cocoSsdVersion": "2.2.3",
+  "tfjsVersion": "4.22.0",
+  "modelJsonSha256": "3770b2528339b1e3340cb74360e1e40401816b009779aeb8d0cce3a4353ea3a9",
+  "modelLoadMs": 2378.90396,
+  "settings": {
+    "minScore": 0.62,
+    "minArea": 0.025,
+    "roi": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "modelOutputMinScore": 0.15,
+    "maxNumBoxes": 20
+  },
+  "preprocessing": {
+    "original": "JPEG decoded to RGB int32 Tensor3D",
+    "width320": "TFJS bilinear resize to width 320 preserving aspect ratio, halfPixelCenters=true, rounded int32. Mirrors app dimensions but is not guaranteed bit-identical to browser Canvas drawImage."
+  },
+  "limits": [
+    "Six hand-selected photographs; smoke test only, no statistically meaningful accuracy estimate.",
+    "CPU timings are Node/container measurements and do not estimate phone browser performance.",
+    "No live camera, dog door hardware, browser rendering, video, occlusion sequence, or night conditions tested.",
+    "Full-frame ROI; thresholds minScore .62 and minArea .025 use the production evidence adapter."
+  ],
+  "summary": {
+    "cases": 12,
+    "passed": 8,
+    "failed": 4
+  },
+  "results": [
+    {
+      "file": "dog-standing-leaves.jpg",
+      "variant": "original",
+      "originalDimensions": [
+        960,
+        640
+      ],
+      "inputDimensions": [
+        960,
+        640
+      ],
+      "expectDog": true,
+      "predictedDog": false,
+      "pass": false,
+      "inferenceMs": 1650.3063959999995,
+      "dogScore": 0,
+      "dogArea": 0,
+      "normalizedDogBox": null,
+      "predictions": [
+        {
+          "class": "sheep",
+          "score": 0.4458712637424469,
+          "bbox": [
+            231.0128688812256,
+            27.261390686035156,
+            651.3221454620361,
+            575.2047348022461
+          ]
+        }
+      ],
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Golden_retriever_stehfoto.jpg",
+      "sha256": "87105a9e4f655645463fb0511936912a7f63e88fef35cb341906f419c9e2d0d0"
+    },
+    {
+      "file": "dog-standing-leaves.jpg",
+      "variant": "width320",
+      "originalDimensions": [
+        960,
+        640
+      ],
+      "inputDimensions": [
+        320,
+        213
+      ],
+      "expectDog": true,
+      "predictedDog": false,
+      "pass": false,
+      "inferenceMs": 1665.6243139999997,
+      "dogScore": 0,
+      "dogArea": 0,
+      "normalizedDogBox": null,
+      "predictions": [
+        {
+          "class": "sheep",
+          "score": 0.6955421566963196,
+          "bbox": [
+            74.35152053833008,
+            9.358301192522049,
+            218.9665985107422,
+            190.56704172492027
+          ]
+        }
+      ],
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Golden_retriever_stehfoto.jpg",
+      "sha256": "87105a9e4f655645463fb0511936912a7f63e88fef35cb341906f419c9e2d0d0"
+    },
+    {
+      "file": "dog-sitting-indoor.jpg",
+      "variant": "original",
+      "originalDimensions": [
+        960,
+        1280
+      ],
+      "inputDimensions": [
+        960,
+        1280
+      ],
+      "expectDog": true,
+      "predictedDog": true,
+      "pass": true,
+      "inferenceMs": 1729.5395159999998,
+      "dogScore": 0.9608457684516907,
+      "dogArea": 0.41965306497409927,
+      "normalizedDogBox": {
+        "x": 0.2902587056159973,
+        "y": 0.16346043348312378,
+        "width": 0.7076853513717651,
+        "height": 0.5929938554763794
+      },
+      "predictions": [
+        {
+          "class": "dog",
+          "score": 0.9608457684516907,
+          "bbox": [
+            278.6483573913574,
+            209.22935485839844,
+            679.3779373168945,
+            759.0321350097656
+          ]
+        },
+        {
+          "class": "potted plant",
+          "score": 0.9534269571304321,
+          "bbox": [
+            672.8901672363281,
+            12.814788818359375,
+            280.27828216552734,
+            407.68310546875
+          ]
+        },
+        {
+          "class": "potted plant",
+          "score": 0.6249102354049683,
+          "bbox": [
+            427.84400939941406,
+            8.383235931396484,
+            311.94751739501953,
+            375.8330726623535
+          ]
+        }
+      ],
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Sitting_golden_retriever.jpg",
+      "sha256": "d620330606b2c90d50a2a18081cce42d147d4cba3403697a0d178bc0115aa3f1"
+    },
+    {
+      "file": "dog-sitting-indoor.jpg",
+      "variant": "width320",
+      "originalDimensions": [
+        960,
+        1280
+      ],
+      "inputDimensions": [
+        320,
+        427
+      ],
+      "expectDog": true,
+      "predictedDog": true,
+      "pass": true,
+      "inferenceMs": 1595.201086,
+      "dogScore": 0.9710566997528076,
+      "dogArea": 0.418463467401029,
+      "normalizedDogBox": {
+        "x": 0.2927860617637634,
+        "y": 0.15832862257957458,
+        "width": 0.6992756128311157,
+        "height": 0.5984242260456085
+      },
+      "predictions": [
+        {
+          "class": "dog",
+          "score": 0.9710566997528076,
+          "bbox": [
+            93.6915397644043,
+            67.60632184147835,
+            223.76819610595703,
+            255.52714452147484
+          ]
+        },
+        {
+          "class": "potted plant",
+          "score": 0.8950239419937134,
+          "bbox": [
+            225.6279182434082,
+            10.047070950269699,
+            91.76406860351562,
+            128.66985708475113
+          ]
+        },
+        {
+          "class": "potted plant",
+          "score": 0.8626928329467773,
+          "bbox": [
+            148.0951690673828,
+            7.38480082154274,
+            101.67598724365234,
+            117.72972956299782
+          ]
+        },
+        {
+          "class": "potted plant",
+          "score": 0.18011219799518585,
+          "bbox": [
+            50.99844932556152,
+            -1.8515035957098007,
+            107.17233657836914,
+            207.54987601935863
+          ]
+        }
+      ],
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Sitting_golden_retriever.jpg",
+      "sha256": "d620330606b2c90d50a2a18081cce42d147d4cba3403697a0d178bc0115aa3f1"
+    },
+    {
+      "file": "dog-standing-tucker.jpg",
+      "variant": "original",
+      "originalDimensions": [
+        800,
+        600
+      ],
+      "inputDimensions": [
+        800,
+        600
+      ],
+      "expectDog": true,
+      "predictedDog": true,
+      "pass": true,
+      "inferenceMs": 1770.953787999999,
+      "dogScore": 0.9578360915184021,
+      "dogArea": 0.47418093190096045,
+      "normalizedDogBox": {
+        "x": 0.30441033840179443,
+        "y": 0.1439887285232544,
+        "width": 0.6344255208969116,
+        "height": 0.7474178075790405
+      },
+      "predictions": [
+        {
+          "class": "dog",
+          "score": 0.9578360915184021,
+          "bbox": [
+            243.52827072143555,
+            86.39323711395264,
+            507.5404167175293,
+            448.4506845474243
+          ]
+        }
+      ],
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Golden_Retriever_standing_Tucker.jpg",
+      "sha256": "3a5f91abf4e14c49265df41436f190fa67420cc2cecd557c9027b558e730d74a"
+    },
+    {
+      "file": "dog-standing-tucker.jpg",
+      "variant": "width320",
+      "originalDimensions": [
+        800,
+        600
+      ],
+      "inputDimensions": [
+        320,
+        240
+      ],
+      "expectDog": true,
+      "predictedDog": true,
+      "pass": true,
+      "inferenceMs": 1623.697694999999,
+      "dogScore": 0.9379681944847107,
+      "dogArea": 0.4795076686856925,
+      "normalizedDogBox": {
+        "x": 0.3036176860332489,
+        "y": 0.14563462138175964,
+        "width": 0.6412269175052643,
+        "height": 0.7477971613407135
+      },
+      "predictions": [
+        {
+          "class": "dog",
+          "score": 0.9379681944847107,
+          "bbox": [
+            97.15765953063965,
+            34.952309131622314,
+            205.19261360168457,
+            179.47131872177124
+          ]
+        }
+      ],
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Golden_Retriever_standing_Tucker.jpg",
+      "sha256": "3a5f91abf4e14c49265df41436f190fa67420cc2cecd557c9027b558e730d74a"
+    },
+    {
+      "file": "dog-sitting-person.jpg",
+      "variant": "original",
+      "originalDimensions": [
+        960,
+        640
+      ],
+      "inputDimensions": [
+        960,
+        640
+      ],
+      "expectDog": true,
+      "predictedDog": false,
+      "pass": false,
+      "inferenceMs": 1642.3366339999993,
+      "dogScore": 0,
+      "dogArea": 0,
+      "normalizedDogBox": null,
+      "predictions": [
+        {
+          "class": "bear",
+          "score": 0.9209417700767517,
+          "bbox": [
+            416.760950088501,
+            194.73173141479492,
+            519.5739269256592,
+            446.5880012512207
+          ]
+        },
+        {
+          "class": "person",
+          "score": 0.7312697768211365,
+          "bbox": [
+            -0.1327228546142578,
+            0.21501541137695312,
+            357.29822158813477,
+            634.3206596374512
+          ]
+        }
+      ],
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Golden_Retriever_sitting_in_front_of_a_man_(Barras).jpg",
+      "sha256": "686a988d5fa5e6f846b2111089f5f85fbef9b1b5bd0887a5def69c59ea4ebb8d"
+    },
+    {
+      "file": "dog-sitting-person.jpg",
+      "variant": "width320",
+      "originalDimensions": [
+        960,
+        640
+      ],
+      "inputDimensions": [
+        320,
+        213
+      ],
+      "expectDog": true,
+      "predictedDog": false,
+      "pass": false,
+      "inferenceMs": 1576.7426589999995,
+      "dogScore": 0,
+      "dogArea": 0,
+      "normalizedDogBox": null,
+      "predictions": [
+        {
+          "class": "bear",
+          "score": 0.8944250345230103,
+          "bbox": [
+            130.68448066711426,
+            64.62572559714317,
+            184.694242477417,
+            149.35535421967506
+          ]
+        },
+        {
+          "class": "person",
+          "score": 0.55968177318573,
+          "bbox": [
+            -0.5947589874267578,
+            0.13020801544189453,
+            130.92617988586426,
+            210.17391729354858
+          ]
+        }
+      ],
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Golden_Retriever_sitting_in_front_of_a_man_(Barras).jpg",
+      "sha256": "686a988d5fa5e6f846b2111089f5f85fbef9b1b5bd0887a5def69c59ea4ebb8d"
+    },
+    {
+      "file": "negative-brown-sofa.jpg",
+      "variant": "original",
+      "originalDimensions": [
+        960,
+        720
+      ],
+      "inputDimensions": [
+        960,
+        720
+      ],
+      "expectDog": false,
+      "predictedDog": false,
+      "pass": true,
+      "inferenceMs": 1564.3282929999987,
+      "dogScore": 0,
+      "dogArea": 0,
+      "normalizedDogBox": null,
+      "predictions": [
+        {
+          "class": "couch",
+          "score": 0.9125056862831116,
+          "bbox": [
+            64.02620315551758,
+            139.36251640319824,
+            812.7361106872559,
+            564.232063293457
+          ]
+        },
+        {
+          "class": "person",
+          "score": 0.15661953389644623,
+          "bbox": [
+            862.0988845825195,
+            0.09500384330749512,
+            65.04066467285156,
+            61.13965094089508
+          ]
+        }
+      ],
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:A_brown_sofa_(2005-03-03).jpg",
+      "sha256": "6e5b17628c6baa16ab4127db83fd840316c7acbb8dd0cdd248821e095093cdc3"
+    },
+    {
+      "file": "negative-brown-sofa.jpg",
+      "variant": "width320",
+      "originalDimensions": [
+        960,
+        720
+      ],
+      "inputDimensions": [
+        320,
+        240
+      ],
+      "expectDog": false,
+      "predictedDog": false,
+      "pass": true,
+      "inferenceMs": 1596.4591040000014,
+      "dogScore": 0,
+      "dogArea": 0,
+      "normalizedDogBox": null,
+      "predictions": [
+        {
+          "class": "couch",
+          "score": 0.9106024503707886,
+          "bbox": [
+            21.26504898071289,
+            46.30654335021973,
+            274.16996002197266,
+            188.30214500427246
+          ]
+        }
+      ],
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:A_brown_sofa_(2005-03-03).jpg",
+      "sha256": "6e5b17628c6baa16ab4127db83fd840316c7acbb8dd0cdd248821e095093cdc3"
+    },
+    {
+      "file": "negative-orange-cat.jpg",
+      "variant": "original",
+      "originalDimensions": [
+        960,
+        638
+      ],
+      "inputDimensions": [
+        960,
+        638
+      ],
+      "expectDog": false,
+      "predictedDog": false,
+      "pass": true,
+      "inferenceMs": 1650.6740590000009,
+      "dogScore": 0,
+      "dogArea": 0,
+      "normalizedDogBox": null,
+      "predictions": [
+        {
+          "class": "cat",
+          "score": 0.97512286901474,
+          "bbox": [
+            337.8410053253174,
+            111.4700031876564,
+            411.22572898864746,
+            521.2401067614555
+          ]
+        },
+        {
+          "class": "bottle",
+          "score": 0.16562674939632416,
+          "bbox": [
+            678.0765151977539,
+            5.503083199262619,
+            146.66175842285156,
+            292.2479913532734
+          ]
+        }
+      ],
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Orange_tabby_cat_laying_down.jpg",
+      "sha256": "89236009d55c69009a0f5144dfc43850b28158ed751d318c9becacb23119aa68"
+    },
+    {
+      "file": "negative-orange-cat.jpg",
+      "variant": "width320",
+      "originalDimensions": [
+        960,
+        638
+      ],
+      "inputDimensions": [
+        320,
+        213
+      ],
+      "expectDog": false,
+      "predictedDog": false,
+      "pass": true,
+      "inferenceMs": 1575.119780000001,
+      "dogScore": 0,
+      "dogArea": 0,
+      "normalizedDogBox": null,
+      "predictions": [
+        {
+          "class": "cat",
+          "score": 0.9109707474708557,
+          "bbox": [
+            106.6423511505127,
+            37.08128383755684,
+            145.4258632659912,
+            176.16953417658806
+          ]
+        },
+        {
+          "class": "bottle",
+          "score": 0.19010406732559204,
+          "bbox": [
+            225.41996002197266,
+            0.8991284966468811,
+            48.006629943847656,
+            98.2657712996006
+          ]
+        }
+      ],
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Orange_tabby_cat_laying_down.jpg",
+      "sha256": "89236009d55c69009a0f5144dfc43850b28158ed751d318c9becacb23119aa68"
+    }
+  ]
+}

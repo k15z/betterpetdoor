@@ -78,6 +78,10 @@ CREATE TABLE IF NOT EXISTS doors (
     encrypted_credentials BLOB NOT NULL,
     created_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS camera_states (
+    door_id TEXT PRIMARY KEY REFERENCES doors(id) ON DELETE CASCADE,
+    state BLOB NOT NULL
+);
 CREATE TABLE IF NOT EXISTS oauth_codes (
     code_hash TEXT PRIMARY KEY,
     client_id TEXT NOT NULL,
@@ -351,4 +355,18 @@ func (db *DB) DeleteDoor(ctx context.Context, id string) error {
 		return ErrNotFound
 	}
 	return nil
+}
+
+// CameraState returns nil for an existing door with no camera configuration.
+func (db *DB) CameraState(ctx context.Context, id string) ([]byte, error) {
+	var state []byte
+	err := db.sql.QueryRowContext(ctx, `SELECT c.state FROM doors d LEFT JOIN camera_states c ON c.door_id = d.id WHERE d.id = ?`, id).Scan(&state)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return state, err
+}
+func (db *DB) SaveCameraState(ctx context.Context, id string, state []byte) error {
+	_, err := db.sql.ExecContext(ctx, `INSERT INTO camera_states(door_id, state) VALUES(?, ?) ON CONFLICT(door_id) DO UPDATE SET state = excluded.state`, id, state)
+	return err
 }

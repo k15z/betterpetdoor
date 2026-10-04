@@ -62,9 +62,9 @@ func (s *Server) openAPISpec(w http.ResponseWriter, r *http.Request) {
 					},
 				},
 			},
-			"/api/doors/{doorId}/commands/open":           commandOperation("openDoor", "Open a pet door"),
-			"/api/doors/{doorId}/commands/close":          commandOperation("closeDoor", "Close a pet door"),
-			"/api/doors/{doorId}/commands/open-and-close": commandOperation("openAndCloseDoor", "Open a pet door, then close it after its configured interval"),
+			"/api/doors/{doorId}/commands/open":           commandOperation("openDoor", "Open a pet door; disarm camera mode and cancel its pending close"),
+			"/api/doors/{doorId}/commands/close":          commandOperation("closeDoor", "Close a pet door; disarm camera mode and cancel its pending close"),
+			"/api/doors/{doorId}/commands/open-and-close": commandOperation("openAndCloseDoor", "Open a pet door, then close after its vendor-configured interval; supersede camera automation"),
 		},
 		"components": map[string]any{
 			"securitySchemes": map[string]any{
@@ -133,6 +133,7 @@ func (s *Server) openAPISpec(w http.ResponseWriter, r *http.Request) {
 			},
 		},
 	}
+	addCameraOpenAPI(spec)
 	writeJSON(w, http.StatusOK, spec)
 }
 
@@ -164,7 +165,9 @@ func commandOperation(operationID, summary string) map[string]any {
 			"summary":     summary,
 			"parameters":  []any{doorIDParameter()},
 			"responses": map[string]any{
-				"200": response("Command accepted", schemaRef("CommandResponse")),
+				"200": response("Command accepted or door already confirmed closed", schemaRef("CommandResponse")),
+				"409": response("Close held by fresh provider safety check; no close command sent", schemaRef("Error")),
+				"502": response("Provider operation not confirmed", schemaRef("Error")),
 				"401": response("Authentication required", schemaRef("Error")),
 				"404": response("Pet door or command not found", schemaRef("Error")),
 			},
@@ -174,4 +177,43 @@ func commandOperation(operationID, summary string) map[string]any {
 
 func nullableBoolean() map[string]any {
 	return map[string]any{"type": []string{"boolean", "null"}}
+}
+
+func addCameraOpenAPI(spec map[string]any) {
+	paths := spec["paths"].(map[string]any)
+	schemas := spec["components"].(map[string]any)["schemas"].(map[string]any)
+	nullableTime := map[string]any{"type": []string{"string", "null"}, "format": "date-time"}
+	schemas["CameraState"] = map[string]any{"type": "object", "properties": map[string]any{
+		"door_id": map[string]string{"type": "string"}, "armed": map[string]string{"type": "boolean"},
+		"session_id": map[string]string{"type": "string"}, "lease_expires_at": nullableTime,
+		"auto_close_seconds": map[string]any{"type": "integer", "minimum": 60, "maximum": 3600, "default": 300},
+		"close_due_at":       nullableTime, "cooldown_until": nullableTime, "updated_at": map[string]string{"type": "string", "format": "date-time"},
+		"status": map[string]string{"type": "string"}, "message": map[string]string{"type": "string"},
+	}}
+	responses := map[string]any{"200": response("Current camera state; a physical command is not proof of movement", schemaRef("CameraState")), "400": response("Invalid request", schemaRef("Error")), "401": response("Authentication required", schemaRef("Error")), "404": response("Door not found", schemaRef("Error")), "409": response("Camera ownership conflict or expired lease", schemaRef("Error")), "502": response("Provider command or status not confirmed; inspect camera state", schemaRef("Error"))}
+	paths["/api/doors/{doorId}/camera"] = map[string]any{"get": map[string]any{"operationId": "getCameraState", "summary": "Read camera ownership, close deadline and safety holds", "parameters": []any{doorIDParameter()}, "responses": responses}}
+	for _, action := range []struct {
+		name, summary string
+		fields        []string
+	}{
+		{"arm", "Arm a per-door camera lease; default close interval is 300 seconds", []string{"session_id"}},
+		{"heartbeat", "Renew an owned camera lease for 45 seconds", []string{"session_id"}},
+		{"disarm", "Stop new openings; retain any pending automatic close", []string{"session_id"}},
+		{"detections", "Submit a local dog detection event; never send images", []string{"session_id", "event_id"}},
+		{"check-close", "Check a due close at the phone timer request; require fresh provider safety", nil},
+		{"cancel-close", "Cancel automatic close and disarm; physically inspect the door", nil},
+	} {
+		properties := map[string]any{}
+		for _, key := range action.fields {
+			properties[key] = map[string]any{"type": "string", "minLength": 8, "maxLength": 128, "pattern": "^[A-Za-z0-9_-]+$"}
+		}
+		if action.name == "arm" {
+			properties["auto_close_seconds"] = map[string]any{"type": "integer", "minimum": 60, "maximum": 3600, "default": 300}
+		}
+		body := map[string]any{"type": "object", "additionalProperties": false, "properties": properties}
+		if len(action.fields) > 0 {
+			body["required"] = action.fields
+		}
+		paths["/api/doors/{doorId}/camera/"+action.name] = map[string]any{"post": map[string]any{"summary": action.summary, "parameters": []any{doorIDParameter()}, "requestBody": map[string]any{"required": true, "content": map[string]any{"application/json": map[string]any{"schema": body}}}, "responses": responses}}
+	}
 }

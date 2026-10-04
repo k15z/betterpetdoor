@@ -1,0 +1,54 @@
+{
+  "models": {
+    "lite_mobilenet_v2": {
+      "report": "model-smoke-results.json",
+      "modelBytes": 18561843,
+      "allCases": {
+        "cases": 12,
+        "passed": 8,
+        "failed": 4
+      },
+      "appSizedCases": {
+        "passed": 4,
+        "total": 6,
+        "dogPositivesPassed": 2,
+        "dogPositives": 4,
+        "nonDogNegativesPassed": 2,
+        "nonDogNegatives": 2,
+        "medianNodeCpuInferenceMs": 1595.8300950000007,
+        "minNodeCpuInferenceMs": 1575.119780000001,
+        "maxNodeCpuInferenceMs": 1665.6243139999997
+      }
+    },
+    "mobilenet_v2": {
+      "report": "model-smoke-results-v2.json",
+      "modelBytes": 67771262,
+      "allCases": {
+        "cases": 12,
+        "passed": 9,
+        "failed": 3
+      },
+      "appSizedCases": {
+        "passed": 5,
+        "total": 6,
+        "dogPositivesPassed": 3,
+        "dogPositives": 4,
+        "nonDogNegativesPassed": 2,
+        "nonDogNegatives": 2,
+        "medianNodeCpuInferenceMs": 2739.2953764999993,
+        "minNodeCpuInferenceMs": 2688.9873920000027,
+        "maxNodeCpuInferenceMs": 2789.2669989999995
+      }
+    }
+  },
+  "identicalFixtureHashes": true,
+  "sizeRatio": 3.6511063044763388,
+  "appSizedNodeCpuMedianLatencyRatio": 1.7165332231060588,
+  "recommendation": "Expose both modes. Prefer MobileNet v2 as the recommended/default recognizer for this prototype because it recovers one clear standing-golden failure at app-sized input; provide Lite as the explicit smaller/faster alternative. Label the tradeoff, do not call either reliable or safe for unattended real door control. This tiny sample is insufficient to establish which is best on the target phone or actual doorway.",
+  "limitations": [
+    "Six selected photos, each reused at two sizes; not twelve independent examples.",
+    "No phone/WebGL, camera, night conditions, real-time latency, hardware, or safety validation.",
+    "320-wide resizing uses TFJS bilinear and is not guaranteed pixel-identical to Canvas drawImage.",
+    "Node CPU timings are single inferences in one shared container; not a controlled sustained benchmark."
+  ]
+}

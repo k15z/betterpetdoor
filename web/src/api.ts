@@ -1,77 +1,128 @@
 export type Door = {
-  id: string
-  name: string
-  provider: string
-  created_at: string
-}
+  id: string;
+  name: string;
+  provider: string;
+  created_at: string;
+};
 
 export type DoorStatus = {
-  state: string
-  online: boolean | null
-  open: boolean | null
-  moving: boolean
-  safe_to_close: boolean | null
-  checked_at: string
-}
+  state: string;
+  online: boolean | null;
+  open: boolean | null;
+  moving: boolean;
+  safe_to_close: boolean | null;
+  checked_at: string;
+};
 
-type APIErrorBody = { error?: string }
+type APIErrorBody = { error?: string };
 
 export class APIError extends Error {
-  status: number
+  status: number;
 
   constructor(status: number, message: string) {
-    super(message)
-    this.status = status
+    super(message);
+    this.status = status;
   }
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
-    credentials: 'same-origin',
+    credentials: "same-origin",
     ...init,
     headers: {
-      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(init?.body ? { "Content-Type": "application/json" } : {}),
       ...init?.headers,
     },
-  })
+  });
   if (!response.ok) {
-    let message = `Request failed (${response.status})`
+    let message = `Request failed (${response.status})`;
     try {
-      const body = (await response.json()) as APIErrorBody
-      if (body.error) message = body.error
+      const body = (await response.json()) as APIErrorBody;
+      if (body.error) message = body.error;
     } catch {
       // Keep the status-based message for non-JSON errors.
     }
-    throw new APIError(response.status, message)
+    throw new APIError(response.status, message);
   }
-  if (response.status === 204) return undefined as T
-  return response.json() as Promise<T>
+  if (response.status === 204) return undefined as T;
+  return response.json() as Promise<T>;
 }
 
 export const api = {
-  session: () => request<{ authenticated: true }>('/api/session'),
+  session: () => request<{ authenticated: true }>("/api/session"),
   login: (password: string) =>
-    request<{ authenticated: true }>('/api/auth/login', {
-      method: 'POST',
+    request<{ authenticated: true }>("/api/auth/login", {
+      method: "POST",
       body: JSON.stringify({ password }),
     }),
-  logout: () => request<void>('/api/auth/logout', { method: 'POST' }),
-  doors: () => request<{ doors: Door[] }>('/api/doors'),
+  logout: () => request<void>("/api/auth/logout", { method: "POST" }),
+  doors: () => request<{ doors: Door[] }>("/api/doors"),
   status: (id: string) => request<DoorStatus>(`/api/doors/${id}/status`),
   addDoor: (input: {
-    name: string
-    provider: 'wayzn'
-    qr_payload: string
-    email: string
-    password: string
+    name: string;
+    provider: "wayzn";
+    qr_payload: string;
+    email: string;
+    password: string;
   }) =>
-    request<Door>('/api/doors', {
-      method: 'POST',
+    request<Door>("/api/doors", {
+      method: "POST",
       body: JSON.stringify(input),
     }),
-  command: (id: string, command: 'open' | 'close' | 'open-and-close') =>
-    request<{ ok: true; command: string }>(`/api/doors/${id}/commands/${command}`, {
-      method: 'POST',
+  command: (id: string, command: "open" | "close" | "open-and-close") =>
+    request<{ ok: true; command: string }>(
+      `/api/doors/${id}/commands/${command}`,
+      {
+        method: "POST",
+      },
+    ),
+  removeDoor: (id: string) =>
+    request<void>(`/api/doors/${id}`, { method: "DELETE" }),
+};
+
+export type CameraSession = {
+  door_id: string;
+  armed: boolean;
+  session_id: string;
+  lease_expires_at: string | null;
+  auto_close_seconds: number;
+  close_due_at: string | null;
+  status: string;
+  message: string;
+  updated_at: string;
+  cooldown_until: string | null;
+};
+export const cameraApi = {
+  state: (id: string) =>
+    request<CameraSession>(`/api/doors/${encodeURIComponent(id)}/camera`),
+  arm: (id: string, session_id: string, auto_close_seconds: number) =>
+    request<CameraSession>(`/api/doors/${encodeURIComponent(id)}/camera/arm`, {
+      method: "POST",
+      body: JSON.stringify({ session_id, auto_close_seconds }),
     }),
-  removeDoor: (id: string) => request<void>(`/api/doors/${id}`, { method: 'DELETE' }),
-}
+  heartbeat: (id: string, session_id: string) =>
+    request<CameraSession>(
+      `/api/doors/${encodeURIComponent(id)}/camera/heartbeat`,
+      { method: "POST", body: JSON.stringify({ session_id }) },
+    ),
+  detection: (id: string, session_id: string, event_id: string) =>
+    request<CameraSession>(
+      `/api/doors/${encodeURIComponent(id)}/camera/detections`,
+      { method: "POST", body: JSON.stringify({ session_id, event_id }) },
+    ),
+  disarm: (id: string, session_id: string) =>
+    request<CameraSession>(
+      `/api/doors/${encodeURIComponent(id)}/camera/disarm`,
+      { method: "POST", keepalive: true, body: JSON.stringify({ session_id }) },
+    ),
+  checkClose: (id: string) =>
+    request<CameraSession>(
+      `/api/doors/${encodeURIComponent(id)}/camera/check-close`,
+      { method: "POST", body: JSON.stringify({}) },
+    ),
+  cancelClose: (id: string) =>
+    request<CameraSession>(
+      `/api/doors/${encodeURIComponent(id)}/camera/cancel-close`,
+      { method: "POST", body: JSON.stringify({}) },
+    ),
+};

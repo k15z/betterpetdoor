@@ -5,7 +5,8 @@ WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
-RUN npm run build
+# Pin and verify browser model assets; no runtime CDN or API service is needed.
+RUN npm run model:download && npm run build
 
 FROM golang:1.26-alpine AS backend
 WORKDIR /src

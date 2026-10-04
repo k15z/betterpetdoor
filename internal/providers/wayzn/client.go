@@ -150,8 +150,11 @@ func (c *Client) Command(ctx context.Context, command string) error {
 	default:
 		return errors.New("unsupported command")
 	}
-	_, err := c.signedPost(ctx, command)
-	return err
+	response, err := c.signedPost(ctx, command)
+	if err != nil {
+		return err
+	}
+	return commandResponseError(response)
 }
 
 func (c *Client) ReadStatus(ctx context.Context) (Status, error) {
@@ -165,6 +168,11 @@ func (c *Client) ReadStatus(ctx context.Context) (Status, error) {
 	if response == "Device is offline." {
 		value := false
 		return Status{State: "offline", Online: &value, Moving: false, CheckedAt: time.Now().UTC().Format(time.RFC3339)}, nil
+	}
+	// A rejected status request must never fall through to an older cached
+	// snapshot that might still claim the door is safe to close.
+	if err := commandResponseError(response); err != nil {
+		return Status{}, err
 	}
 
 	legacyKey := len(response) == 16 && allHex(response)
@@ -425,9 +433,6 @@ func normalizeStatus(snapshot map[string]any) Status {
 	connected, hasConnected := snapshot["Connected"].(bool)
 	if hasConnected {
 		status.Online = &connected
-	} else {
-		value := true
-		status.Online = &value
 	}
 	if !connected && hasConnected {
 		status.State = "offline"
@@ -524,4 +529,41 @@ func unique(values []string) []string {
 		}
 	}
 	return result
+}
+
+// Some provider failures arrive with HTTP 200. Do not report these as accepted
+// commands. The protocol's remaining successful payloads are left compatible.
+func commandResponseError(response string) error {
+	value := strings.ToLower(strings.TrimSpace(response))
+	var body map[string]any
+	if json.Unmarshal([]byte(response), &body) == nil && body != nil {
+		for _, key := range []string{"success", "ok"} {
+			if flag, exists := body[key].(bool); exists && !flag {
+				return ErrRemote
+			}
+		}
+		if failure, exists := body["error"]; exists && failure != nil && failure != false && failure != "" {
+			return ErrRemote
+		}
+		// Look at values rather than key names: {"error":null,"ok":true}
+		// is not itself a rejected command or status request.
+		for _, key := range []string{"status", "message", "reason"} {
+			if text, ok := body[key].(string); ok && failureText(strings.ToLower(text)) {
+				return ErrRemote
+			}
+		}
+		return nil
+	}
+	if failureText(value) || value == "false" || value == "null" {
+		return ErrRemote
+	}
+	return nil
+}
+func failureText(value string) bool {
+	for _, failure := range []string{"offline", "error", "fail", "denied", "invalid", "unauthor", "not authorized", "reject", "obstruct", "busy", "not safe", "unsafe"} {
+		if strings.Contains(value, failure) {
+			return true
+		}
+	}
+	return false
 }
